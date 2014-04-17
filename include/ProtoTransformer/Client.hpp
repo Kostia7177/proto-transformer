@@ -1,7 +1,9 @@
 #pragma once
 /*
-    Easy way to make your own application-layer protocol. Like a robot-transformer
+    Easy way to make your own application-layer protocol. Like a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
+
+    candid.71 -at- mail -dot- ru
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -64,18 +66,19 @@ class Client
 
     typedef Int2Type<true> NoAnswerSupposed;
     typedef Int2Type<false> AnyAnswerCanBe;
-    template<class F, typename H>void readAnswerSw(const F &, const H &,const NoAnswerSupposed &){}
-    template<class F>void readAnswerSw(const F &, NullType, const AnyAnswerCanBe &)
-    {
-        readingManager.get(ioSocket, sessionHdr);
-    }
+
+    template<class F, typename H>
+    void readAnswerSw(const F &, const H &, const NoAnswerSupposed &);
+    template<class F>
+    void readAnswerSw(const F &, NullType, const AnyAnswerCanBe &);
     template<typename H>
-    void readAnswerSw(NullType,H &, const AnyAnswerCanBe &);
+    void readAnswerSw(NullType, H &, const AnyAnswerCanBe &);
 
     public:
 
     Client(const std::string &, int, SessionHdr = SessionHdr());
     ~Client(){}
+
     const AnswerData &request(typename Cfg::RequestHdr &, const RequestData &, typename Cfg::AnswerHdr *, AnswerAwaiting = answerSupposed);
     const AnswerData &request(typename Cfg::RequestHdr &, const RequestData &, AnswerAwaiting = answerSupposed);
     const AnswerData &request(const RequestData &, typename Cfg::AnswerHdr *, AnswerAwaiting = answerSupposed);

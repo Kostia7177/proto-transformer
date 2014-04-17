@@ -15,7 +15,7 @@ void Session<Cfg>::run(F payload)
 template<class Cfg>
 template<typename SessionHdr, class F>
 void Session<Cfg>::runSw(
-    const SessionHdr &,
+    const SessionHdr &, // session header specified - so read it first;
     F payload,
     ExitDetectorPtr exitDetector)
 {
@@ -32,7 +32,8 @@ void Session<Cfg>::runSw(
 template<class Cfg>
 template<class F>
 void Session<Cfg>::runSw(
-    const NullType &,
+    const NullType &,   // no session header specified - start reading
+                        // the requests themselves immediately;
     F payload,
     ExitDetectorPtr exitDetector)
 {
@@ -43,7 +44,8 @@ void Session<Cfg>::runSw(
 template<class Cfg>
 template<class RequestCompletion, class F>
 void Session<Cfg>::readRequestSw(
-    const RequestCompletion &,
+    const RequestCompletion &,  // completion function instead of
+                                // request header specified;
     F payload,
     ExitDetectorPtr exitDetector)
 {
@@ -58,10 +60,11 @@ void Session<Cfg>::readRequestSw(
 template<class Cfg>
 template<class F>
 void Session<Cfg>::readRequestSw(
-    const NullType &,
+    const NullType &,   // no reading completion function specified...
     F payload,
     ExitDetectorPtr exitDetector)
 {
+    // ...so read the header first...
     async_read(*ioSocketPtr, boost::asio::buffer(&requestHdr, sizeof(requestHdr)),
                [=] (const boost::system::error_code &errorCode,
                     size_t numOfBytes)
@@ -69,8 +72,10 @@ void Session<Cfg>::readRequestSw(
                     if (errorCode || manager.sessionWasRemoved()) { return; }
 
                     typename Cfg::GetSizeOfRequestFromHdr getSizeOfRequestFromHdr;
+                    // ...and then get a request size from the header...
                     inDataBuffer.resize(getSizeOfRequestFromHdr(requestHdr) / sizeof(typename Cfg::RequestDataRepr));
 
+                    // ...and then read the request itself;
                     async_read(*ioSocketPtr, boost::asio::buffer(inDataBuffer),
                                [=] (const boost::system::error_code &errorCode,
                                     size_t numOfBytesRecivied)

@@ -1,6 +1,7 @@
 /*
     Easy way to make your own application-layer protocol. Like a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
+    candid.71 -at- mail -dot- ru
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -65,16 +65,16 @@ int doSomething(
               std::back_inserter(outBuffer));
 
     uint32_t &numOfRequestsLeft = *getNumPtr(answerHdr);
-    numOfRequestsLeft = -- sessionSpecific.numOfRequestsLeft;
+    numOfRequestsLeft = sessionSpecific.numOfRequestsLeft -- ;
     if (!numOfRequestsLeft)
     {
         std::stringstream sessionFooter;
         time_t duration = time(0) - sessionSpecific.startedAt;
         std::lock_guard<std::mutex> lockGuard(lockerRef);
-        std::pair<Durations::iterator, bool> inserted = durationsRef.insert(duration);
+        auto inserted = durationsRef.insert(duration).first;
         sessionFooter << std::endl
                       << " Session duration: " << duration << " second(s); " << std::endl
-                      << " Rating position: "  << std::distance(durationsRef.begin(), inserted.first) + 1 << "; ";
+                      << " Rating position: "  << std::distance(durationsRef.begin(), inserted) + 1 << "; ";
         std::string sessionFooterStr = sessionFooter.str();
         std::copy(sessionFooterStr.begin(),
                   sessionFooterStr.end(),

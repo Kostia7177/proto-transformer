@@ -37,16 +37,16 @@ class Session
 
     SocketPtr ioSocketPtr;
 
-    // a thing that controls the reading if no
-    // the request size is known...
+    // a thing that controls the reading,
+    // if no the request size is known...
     typedef typename Cfg::
                      ReadingManager::
                      template Itself<typename Cfg::RequestCompletion,
                                      typename Cfg::RequestDataRepr> RequestReadingManager;
     RequestReadingManager readingManager;
     // ...but it's completion can be recognized
-    // while reading the request body - the following is
-    // a user-defined code, that it provides;
+    // while reading the request body - the following
+    // is a user-defined code, that it provides;
     typename RequestReadingManager::Completion requestCompletion;
     typename Cfg::InitSessionSpecific initSessionSpecific;
 
