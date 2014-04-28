@@ -3,7 +3,7 @@ proto-transformer
 
 #How to use.
 
-First, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
+*First*, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
 
 ```cpluspllus
 // YourOwnProto.h file
@@ -23,8 +23,7 @@ typedef ProtoTransformer::Proto
 Order of policies is random.
 Full list of available protocol policies available at the appendix A.
 
-Second, create your server:
-------
+*Second*, create your server:
 
 ```cplusplus
 // YourServer.cpp file;
@@ -51,15 +50,16 @@ int main(int argc, char **argv)
 
 	return 0;
 }
+
 // end of YourServer.cpp file;
 ```
 Note that the first template parameter in server definition must be a protocol.
 Other (non-protocol parameters) may be follow in a random order. Full list of available non-protocol
 tunings sees at the appendix B.
-And third. Create a client.
-    -----
+And *third*. Create a client.
 ```cplusplus
 // YourOwnClient.cpp file
+
 #include <ProtoTransformer/Server.hpp>
 #include "YourOwnProto.hpp"
 int main(int argc, char **argv)
@@ -76,6 +76,7 @@ int main(int argc, char **argv)
 
 	return 0;
 }
+
 // end of YourOwnClient.cpp file
 ```
 #Appendix A. Protocol components.
