@@ -85,12 +85,12 @@ int main(int argc, char **argv)
 
 Angle bracets contain a default pre-set value.
 
-	Whole session description
+####Whole session description
 	- SessionHdrIs<NullType>	- any session invariant; passed to a server
 					  after connection will be established at the
 					  very beginning of the session;
 
-	Request description
+####Request description
 	- RequestHdrIs<PureHdr>		- by default is uint32_t and is to be calculated,
 					  automatically as a size of request data buffer;
 	- GetSizeOfRequestFromHdrIs<Network2HostLong>	- by default is ntohl();
@@ -102,7 +102,7 @@ Angle bracets contain a default pre-set value.
 					  explicitly;
 	- RequestDataReprIs<unsigned char>	- value type of a request vector;
 
-	Answer description
+####Answer description
 	- ServerSendsAnswer<AtLeastHeader>	- by default - if the answer contains no
 						  data, just a header will be returned
 						  to a client (signalling that no data
@@ -119,29 +119,29 @@ Angle bracets contain a default pre-set value.
 
 ###Appendix B. Non-protocol components.
 
-	- NumOfWorkersIs<Int2Type<hardwareConcurrency>>	- number of parallel sessions;
-	- ParallelRequestsPerSessionIs<Int2Type<1>>	- has a meaning if SessionThreadPoolIs
-							  points to something multi-threaded
-							  (boost::threadpool, for example)
-							  note, that 0 means thread concurrency!
-	- SessionSpecificIs<NullType>			- such a session-static variable(s); some
-							  data that is available for all requests
-							  within a session (and is not available
-							  for all the other sessions requests);
-	- InitSessionSpecificIs<NullType>		- function that initializes session
-							  specific (may be by session-header
-							  data or it's part);
-	- SessionManagerIs<EmptyManager>		- empty (by default); starts the session
-							  and forget about it - session will be
-							  dropped when it'll be finished independently
-							  of a server; see SessionManagers/Empty.hpp;
-							  alternatively there could be used a manager
-							  with map that remembers all the sessions and
-							  terminates them on server's exit; see
-							  SessionManagers/WithMap.hpp;
-	- ServerThreadPoolIs<boost::threadpool::pool>
-	- SessionThreadPoolIs<NullType>
-	- ReadingManagerIs<ReadingManager>		- that thing, that manages the reading
-							  when no request size is known (not a
-							  completion function! just what it calls!
-							  see ReadingManager.hpp file);
+- NumOfWorkersIs<Int2Type<hardwareConcurrency>>	- number of parallel sessions;
+- ParallelRequestsPerSessionIs<Int2Type<1>>	- has a meaning if SessionThreadPoolIs
+						  points to something multi-threaded
+						  (boost::threadpool, for example)
+						  note, that 0 means thread concurrency!
+- SessionSpecificIs<NullType>			- such a session-static variable(s); some
+						  data that is available for all requests
+						  within a session (and is not available
+						  for all the other sessions requests);
+- InitSessionSpecificIs<NullType>		- function that initializes session
+						  specific (may be by session-header
+						  data or it's part);
+- SessionManagerIs<EmptyManager>		- empty (by default); starts the session
+						  and forget about it - session will be
+						  dropped when it'll be finished independently
+						  of a server; see SessionManagers/Empty.hpp;
+						  alternatively there could be used a manager
+						  with map that remembers all the sessions and
+						  terminates them on server's exit; see
+						  SessionManagers/WithMap.hpp;
+- ServerThreadPoolIs<boost::threadpool::pool>
+- SessionThreadPoolIs<NullType>
+- ReadingManagerIs<ReadingManager>		- that thing, that manages the reading
+						  when no request size is known (not a
+						  completion function! just what it calls!
+						  see ReadingManager.hpp file);
