@@ -1,10 +1,9 @@
 proto-transformer
 =================
 
-#How to use.#
+#How to use.
 
 First, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
------
 
 ```cpluspllus
 // YourOwnProto.h file
