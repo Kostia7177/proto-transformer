@@ -1,8 +1,7 @@
 proto-transformer
 =================
 
-How to use.
-~~~~~~~~~~~
+#How to use.
 
 First, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
 -----
@@ -82,8 +81,7 @@ int main(int argc, char **argv)
 
 // end of YourOwnClient.cpp file
 
-Appendix A. Protocol components.
-~~~~~~~~~~~
+#Appendix A. Protocol components.
 
   Angle bracets contain a default pre-set value.
 
@@ -119,8 +117,7 @@ Appendix A. Protocol components.
 	- AnswerCompletionIs<NullType>
 	- AnswerDataReprIs<unsigned char>
 
-Appendix B. Non-protocol components.
-~~~~~~~~~~~
+#Appendix B. Non-protocol components.
 
 	- NumOfWorkersIs<Int2Type<hardwareConcurrency>>	- number of parallel sessions;
 	- ParallelRequestsPerSessionIs<Int2Type<1>>	- has a meaning if SessionThreadPoolIs
