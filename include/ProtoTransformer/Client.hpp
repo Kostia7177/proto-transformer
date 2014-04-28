@@ -1,6 +1,6 @@
 #pragma once
 /*
-    Easy way to make your own application-layer protocol. Like a robot-transformer.
+    Easy way to make your own application-layer protocol. Just play with it like with a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
 
     candid.71 -at- mail -dot- ru

@@ -65,7 +65,7 @@ void Session<Cfg>::readRequestSw(
     ExitDetectorPtr exitDetector)
 {
     // ...so read the header first...
-    async_read(*ioSocketPtr, boost::asio::buffer(&requestHdr, sizeof(requestHdr)),
+    async_read(*ioSocketPtr, boost::asio::buffer(&taskBuffers.requestHdr, sizeof(taskBuffers.requestHdr)),
                [=] (const boost::system::error_code &errorCode,
                     size_t numOfBytes)
                {
@@ -73,10 +73,10 @@ void Session<Cfg>::readRequestSw(
 
                     typename Cfg::GetSizeOfRequestFromHdr getSizeOfRequestFromHdr;
                     // ...and then get a request size from the header...
-                    inDataBuffer.resize(getSizeOfRequestFromHdr(requestHdr) / sizeof(typename Cfg::RequestDataRepr));
+                    taskBuffers.inDataBuffer.resize(getSizeOfRequestFromHdr(taskBuffers.requestHdr) / sizeof(typename Cfg::RequestDataRepr));
 
                     // ...and then read the request itself;
-                    async_read(*ioSocketPtr, boost::asio::buffer(inDataBuffer),
+                    async_read(*ioSocketPtr, boost::asio::buffer(taskBuffers.inDataBuffer),
                                [=] (const boost::system::error_code &errorCode,
                                     size_t numOfBytesRecivied)
                                {
@@ -92,42 +92,55 @@ void Session<Cfg>::processRequest(
     F payload,
     ExitDetectorPtr exitDetector)
 {
-    outDataBuffer.clear();
-    // no need to pass to a payload:
-    // -- request header, if it doesn't contents anything but size of a request -
-    //    user's code could see it as a size of an input buffer;
-    ReplaceWithNullIf2nd<typename Cfg::RequestHdr,
-                         std::is_same<typename Cfg::GetSizeOfRequestFromHdr,
-                                      Network2HostLong>::value> requestHdrCorrected(requestHdr);
-    // -- answer header, if it doesn't contains anything but size of an answer -
-    //    by the same reason;
-    ReplaceWithNullIf2nd<typename Cfg::AnswerHdr,
-                         std::is_same<typename Cfg::SetSizeOfAnswer2Hdr,
-                                      Host2NetworkLong>::value> answerHdrCorrected(answerHdr);
-    // -- out data buffer, if proto does not provide any
-    //    answer (what would user do with it at all?...);
-    ReplaceWithNullIf2nd<AnswerDataBuffer, !Cfg::serverSendsAnswer> outDataBufferCorrected(outDataBuffer);
+    taskBuffers.outDataBuffer.clear();
 
-    int retCode = 0;
-    try
-    {
-        // now throw out all the NullType-things and call
-        // the user's payload code with all that remains;
-        retCode = filteringAdapter(payload,
-                                   sessionHdr,
-                                   requestHdrCorrected.value,
-                                   inDataBuffer,
-                                   sessionSpecific,
-                                   answerHdrCorrected.value,
-                                   outDataBufferCorrected.value);
-    }
-    catch (...)
-    {
-    }
+    auto buffersPrivate = Cfg::TaskManager::getPrivate(taskBuffers);
+    taskManager.schedule([=]
+                         {
+                            int retCode = 0;
+                            try
+                            {
+                                ExitDetectorPtr keeper(exitDetector);
+
+                                // no need to pass to a payload:
+                                // -- request header, if it doesn't contents anything but size of a request -
+                                //    user's code could see it as a size of an input buffer;
+                                ReplaceWithNullIf2nd<typename Cfg::RequestHdr,
+                                                     std::is_same<typename Cfg::GetSizeOfRequestFromHdr,
+                                                                  Network2HostLong
+                                                                 >::value
+                                                    > requestHdrCorrected(buffersPrivate->requestHdr);
+                                // -- answer header, if it doesn't contains anything but size of an answer -
+                                //    by the same reason;
+                                ReplaceWithNullIf2nd<typename Cfg::AnswerHdr,
+                                                     std::is_same<typename Cfg::SetSizeOfAnswer2Hdr,
+                                                                  Host2NetworkLong
+                                                                 >::value
+                                                    > answerHdrCorrected(buffersPrivate->answerHdr);
+                                // -- out data buffer, if proto does not provide any
+                                //    answer (what would user do with it at all?...);
+                                ReplaceWithNullIf2nd<typename TaskBuffers::Answer,
+                                                     Cfg::serverSendsAnswer == never
+                                                    > outDataBufferCorrected(buffersPrivate->outDataBuffer);
+
+                                // now throw out all the NullType-things and call
+                                // the user's payload code with all that remains;
+                                retCode = filteringAdapter(payload,
+                                                           sessionHdr,
+                                                           requestHdrCorrected.value,
+                                                           buffersPrivate->inDataBuffer,
+                                                           sessionSpecific,
+                                                           answerHdrCorrected.value,
+                                                           outDataBufferCorrected.value);
+
+                            }
+                            catch (...){}
+
+                            if (!retCode) { (*ioSocketPtr).shutdown(Socket::shutdown_receive); }
+                         });
 
     if (manager.sessionWasRemoved()) { return; }
-    if (!retCode) { manager.exitGracefull(); }
-    writeAnswerSw(answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payload, exitDetector);
+    writeAnswerSw(taskBuffers.answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payload, exitDetector);
 }
 
 template<class Cfg>
@@ -138,7 +151,6 @@ void Session<Cfg>::writeAnswerSw(
     F payload,
     ExitDetectorPtr exitDetector)
 {
-    if (manager.endOfSessionReached()) { return; }
     readRequestSw(requestCompletion, payload, exitDetector); 
 }
 
@@ -151,8 +163,9 @@ void Session<Cfg>::writeAnswerSw(
     ExitDetectorPtr exitDetector)
 {
     typename Cfg::SetSizeOfAnswer2Hdr setSizeOfAnswer2Hdr;
-    setSizeOfAnswer2Hdr(outDataBuffer.size() * sizeof(typename Cfg::AnswerDataRepr), answerHdr);
-    async_write(*ioSocketPtr, boost::asio::buffer(&answerHdr, sizeof(answerHdr)),
+    setSizeOfAnswer2Hdr(taskBuffers.outDataBuffer.size() * sizeof(typename Cfg::AnswerDataRepr), taskBuffers.answerHdr);
+
+    async_write(*ioSocketPtr, boost::asio::buffer(&taskBuffers.answerHdr, sizeof(taskBuffers.answerHdr)),
                 [=] (const boost::system::error_code &errorCode,
                      size_t)
                 {
@@ -169,12 +182,11 @@ void Session<Cfg>::writeAnswerSw(
     F payload,
     ExitDetectorPtr exitDetector)
 {
-    if (outDataBuffer.empty())
+    if (taskBuffers.outDataBuffer.empty())
     {
-        if (manager.endOfSessionReached()) { return; }
         readRequestSw(requestCompletion, payload, exitDetector);
     }
-    else { writeAnswerSw(answerHdr, AtLeastHeader(), payload, exitDetector); }
+    else { writeAnswerSw(taskBuffers.answerHdr, AtLeastHeader(), payload, exitDetector); }
 }
 
 template<class Cfg>
@@ -194,21 +206,15 @@ void Session<Cfg>::writeAnswerData(
     F payload,
     ExitDetectorPtr exitDetector)
 {
-    if (!outDataBuffer.size())
+    if (!taskBuffers.outDataBuffer.size())
     {
-        if (manager.endOfSessionReached()) { return; }
         readRequestSw(requestCompletion, payload, exitDetector);
     }
-    async_write(*ioSocketPtr, boost::asio::buffer(outDataBuffer),
+    async_write(*ioSocketPtr, boost::asio::buffer(taskBuffers.outDataBuffer),
                 [=] (const boost::system::error_code &errorCode,
                      size_t numOfBytesSent)
                 {
-                    if (errorCode
-                        || manager.sessionWasRemoved()
-                        || manager.endOfSessionReached())
-                    {
-                        return;
-                    }
+                    if (errorCode || manager.sessionWasRemoved()) { return; }
                     readRequestSw(requestCompletion, payload, exitDetector);
                 });
 }

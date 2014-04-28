@@ -25,14 +25,36 @@ int main(
         return 1;
     }
 
-    Server<ProtoWithoutAnswer>(port, doSomething);
+    Server<ProtoWithoutAnswer,
+           UsePolicy<SessionThreadPoolIs, boost::threadpool::pool>,
+           UsePolicy<ParallelRequestsPerSessionIs, Int2Type<42>>>(port, doSomething);
     return 0;
 }
 
 int doSomething(const RequestData &inBuffer)
 {
-    std::cout << "in buffer: '" << &inBuffer[0] << "'; " << std::endl;
-    struct timespec pause = { 1, 0 };
-    nanosleep(&pause, 0);
+    std::cout << "Request started at " << time(0)
+              << "; with in buffer: '" << &inBuffer[0]
+              << "'; at thread " << pthread_self()
+              << "; " << std::endl;
+
+    std::string request(inBuffer.begin(), inBuffer.begin() + strlen(&inBuffer[0]));
+    if (request == "terminate")
+    {
+        std::cout << "Session termination requested at " << time(0) << "; " << std::endl;
+        return 0;
+    }
+
+    std::string::size_type endOfSubstr = request.find('/');
+    if (endOfSubstr != std::string::npos)
+    {
+        struct timespec pause = { 0, 0 };
+        try { pause.tv_sec = stoi(std::string(request, 0, endOfSubstr)); }
+        catch (const std::invalid_argument &){}
+        nanosleep(&pause, 0);
+    }
+    std::cout << "Request '" << &inBuffer[0]
+              << "'; processed at " << time(0) << "; " << std::endl;
+
     return 1;
 }

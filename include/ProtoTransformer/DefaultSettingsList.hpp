@@ -1,15 +1,20 @@
 #pragma once
 
 #include "detail/PreSettings.hpp"
+#include "detail/SessionManagers/WithMap.hpp"
+#include "detail/SessionManagers/Empty.hpp"
+#include "detail/PureHdr.hpp"
+#include "detail/ReadingManager.hpp"
+#include <threadpool.hpp>
 
 namespace ProtoTransformer
 {
 
 // You can replace this typedef by Your own one - to define
-// default settings that are most requently used in Your
+// default settings that are most frequently used in Your
 // project. So that it is why it moved out from 'detail'.
-// Be aware mistakes (to forget something, for example) -
-// hundred-screen-long error messages are guaranteed!
+// Be carefull, avoid the dumb mistakes (to forget something,
+// for example) - hundred-screen-long error messages are guaranteed!
 typedef Params2Hierarchy
     <
         // proto describing components:
@@ -49,8 +54,12 @@ typedef Params2Hierarchy
         AnswerDataReprIs<unsigned char>,
 
         // non-proto things:
-        NumOfWorkersIs<Int2Type<hardwareConcurrency>>,  // ...but You can set some
+        NumOfWorkersIs<Int2Type<hardwareConcurrency>>,  // ...but You can set something
                                                         // a bit more smart;
+        ParallelRequestsPerSessionIs<Int2Type<1>>,  // has a meaning if SessionThreadPoolIs
+                                                    // points to something multi-threaded
+                                                    // (boost::threadpool, for example)
+                                                    // note, that 0 means thread concurrency!
         //
         SessionSpecificIs<NullType>,    // such a session-static variable(s); some
                                         // data that is available for all requests
@@ -62,16 +71,17 @@ typedef Params2Hierarchy
                                             // specific (may be by session-header
                                             // data or it's part);
         //
-        SessionManagerIs<EmptyManager>, // empty (by default) starts the session
+        SessionManagerIs<EmptyManager>, // empty (by default); starts the session
                                         // and forget about it - session will be
                                         // dropped when it'll be finished independently
-                                        // of server; see SessionManagers/Empty.hpp;
+                                        // of a server; see SessionManagers/Empty.hpp;
                                         // alternatively there could be used a manager
-                                        // with map that remembers all the sessoins and
+                                        // with map that remembers all the sessions and
                                         // terminates them on server's exit; see
                                         // SessionManagers/WithMap.hpp;
         //
-        ThreadPoolIs<boost::threadpool::pool>,
+        ServerThreadPoolIs<boost::threadpool::pool>,
+        SessionThreadPoolIs<NullType>,
         ReadingManagerIs<ReadingManager>    // that thing, that manages the reading
                                             // when no request size is known (not a
                                             // completion function! just what it calls!

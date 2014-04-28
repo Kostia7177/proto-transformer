@@ -38,5 +38,5 @@ int doSomething(
     // no need to put a '\0' to the end of an answer -
     // it is copied from a request;
 
-    return 1;
+    return std::string(inBuffer.begin(), inBuffer.begin() + strlen(&inBuffer[0])) != "terminate";
 }

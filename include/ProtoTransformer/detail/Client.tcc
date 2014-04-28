@@ -1,5 +1,5 @@
 /*
-    Easy way to make your own application-layer protocol. Like a robot-transformer.
+    Easy way to make your own application-layer protocol. Just play with it like with a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
 
     candid -at- mail -dot- ru

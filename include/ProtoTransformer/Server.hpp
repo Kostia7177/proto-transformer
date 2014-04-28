@@ -1,6 +1,6 @@
 #pragma once
 /*
-    Easy way to make your own application-layer protocol. Like a robot-transformer.
+    Easy way to make your own application-layer protocol. Just play with it like with a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
 
     candid.71 -at- mail -dot- ru
@@ -43,14 +43,18 @@ class Server
         requestCompletionNotDefined = std::is_same<typename ParamProto::RequestCompletion, NullType>::value
     };
     static_assert(requestHdrNotDefined || requestCompletionNotDefined,
-                  "Both of request header and request completion function cannot be defined. (Hint: Choose one of them and turn to NullType another.) ");
+                  "Both of request header and request completion function cannot be "
+                  "defined. (Hint: Choose one of them and turn to NullType another.) ");
     static_assert(!(requestHdrNotDefined && requestCompletionNotDefined),
-                  "One (and strictly one) of either request header or request completion function must be defined. ");
+                  "One (and strictly one) of either request header or request "
+                  "completion function must be defined. ");
     static_assert(ParamProto::selectorIdx == 0,
                   "First template parameter must be a proto here! ");
     static_assert(!(ParamProto::serverSendsAnswer == atLeastHdr
                     && std::is_same<typename ParamProto::AnswerHdr, NullType>::value),
-                  "Server cannot return at least header of an answer when it is defined as NullType! Fix Your proto. (Hint: define an answer's header as any meaningfull OR set 'serverSendsAnswer' proto parameter to 'nothingIfNoData'. ) ");
+                  "Server cannot return at least header of an answer when it is defined "
+                  "as NullType! Fix Your proto. (Hint: define an answer's header as any "
+                  "meaningfull OR set 'serverSendsAnswer' proto parameter to 'nothingIfNoData'. ) ");
     //
     // ...and other parameters correctness;
     NonProtoParamsChecker<Params...> paramsAreOk;
@@ -60,10 +64,15 @@ class Server
           public ParamProto
     {   // merging Proto with other parameters
     };
+    static_assert(std::is_same<typename Cfg::SessionThreadPool, NullType>::value
+                  || !std::is_same<typename Cfg::SessionThreadPool, NullType>::value
+                     && Cfg::serverSendsAnswer == never,
+                  "Parallel requests processing within a session is available with "
+                  "no-answer proto only! ");
 
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::acceptor acceptor;
-    typename Cfg::ThreadPool workingThreads;
+    typename Cfg::ServerThreadPool workingThreads;
 
     typedef typename Cfg::SessionManager::template Itself<Session<Cfg>> SessionManager;
     typedef std::shared_ptr<SessionManager> SessionManagerPtr;

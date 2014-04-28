@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <thread>
 
 template<int arg> using Int2Type = std::integral_constant<int, arg>;
 struct NullType {};
@@ -87,3 +88,9 @@ struct IsTransferable<T,
 
 template<class T, bool toggle> struct EmptyOrNot { typedef T type; };
 template<class T> struct EmptyOrNot<T, false> { typedef NullType type; };
+
+enum { hardwareConcurrency = 0 };
+unsigned int getNumOfThreads(unsigned int numOf)
+{
+    return numOf == hardwareConcurrency ? std::thread::hardware_concurrency() : numOf;
+}

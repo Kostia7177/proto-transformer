@@ -15,13 +15,8 @@ struct EmptyManager
     };
 
     template<class S>
-    class Reference
+    struct Reference
     {
-        bool sessionIsOver;
-        public:
-        Reference() : sessionIsOver(false){}
-        void exitGracefull(){ sessionIsOver = true; }
-        bool endOfSessionReached(){ return sessionIsOver; }
         bool sessionWasRemoved(){ return false; }
     };
 

@@ -58,11 +58,11 @@ struct SessionManagerWithMap
     class Reference
     {   // Session-side part of a sessionManager, field 'manager' of
         // a Session, knows about session manager Itself by keeping a shared
-        // pointer to ExitDispatcher (witch knows about session manager Itself thruogh
+        // pointer to ExitDispatcher (witch knows about session manager Itself through
         // a pointer to it), notifies it when Session is about exiting ('unlink()'
         // method) and accepts request from a session manager Itself to a Session
         // to exit ('markAsExiting()' method)
-        enum Status { running = 0, wasRemoved = 0x1, isOver = 0x2 };
+        enum Status { running = 0, wasRemoved = 0x1 };
         int status;
         typedef std::shared_ptr<ExitDispatcher<S>> ExitDispatcherPtr;
         ExitDispatcherPtr exitDispatcherPtr;
@@ -74,8 +74,6 @@ struct SessionManagerWithMap
             : status(running),
               sessionId((unsigned long int)this){}
 
-        bool endOfSessionReached(){ return status & isOver; }
-        void exitGracefull(){ status |= isOver; }
         bool sessionWasRemoved(){ return status & wasRemoved; }
         void markAsExiting(){ status |= wasRemoved; }
         void unlink(){ exitDispatcherPtr->unlink(this); }

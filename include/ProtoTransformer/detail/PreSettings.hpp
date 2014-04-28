@@ -1,16 +1,9 @@
 #pragma once
 
 #include <string.h>
-#include <utility>
-#include <thread>
-#include <boost/system/error_code.hpp>
-#include <threadpool.hpp>
-#include "SessionManagers/WithMap.hpp"
-#include "SessionManagers/Empty.hpp"
-#include "PureHdr.hpp"
 #include "Tools.hpp"
 #include "AnswerCases.hpp"
-#include "ReadingManager.hpp"
+#include "ThreadPoolWrapper.hpp"
 
 #define AndAnyBase , class Base = NullType
 #define DerivedFromBase : virtual public Base
@@ -122,10 +115,18 @@ struct SessionManagerIs DerivedFromBase
     enum { proto = 0 };
 };
 
-template<class T>
-struct ThreadPoolIs
+template<class T AndAnyBase>
+struct ServerThreadPoolIs DerivedFromBase
 {
-    typedef T ThreadPool;
+    typedef T ServerThreadPool;
+    enum { proto = 0 };
+};
+
+template<class T AndAnyBase>
+struct SessionThreadPoolIs DerivedFromBase
+{
+    typedef T SessionThreadPool;
+    typedef ThreadPoolWrapper<SessionThreadPool> TaskManager;
     enum { proto = 0 };
 };
 
@@ -136,17 +137,17 @@ struct ReadingManagerIs DerivedFromBase
     enum { proto = 0 };
 };
 
-enum { hardwareConcurrency = 0 };
-
 template<class T AndAnyBase>
-class NumOfWorkersIs DerivedFromBase
+struct NumOfWorkersIs DerivedFromBase
 {
     static const unsigned int numOfWorkers = T::value;
-    public:
-    static unsigned int getNumOfWorkers()
-    {
-        return numOfWorkers == hardwareConcurrency ? std::thread::hardware_concurrency() : numOfWorkers;
-    }
+    enum { proto = 0 };
+};
+
+template<class T AndAnyBase>
+struct ParallelRequestsPerSessionIs DerivedFromBase
+{
+    static const unsigned int numOfRequestsPerSession = T::value;
     enum { proto = 0 };
 };
 

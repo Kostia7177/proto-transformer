@@ -1,5 +1,5 @@
 /*
-    Easy way to make your own application-layer protocol. Like a robot-transformer.
+    Easy way to make your own application-layer protocol. Just play with it like with a robot-transformer.
     Copyright (C) 2014  Konstantin U. Zozoulia
     candid.71 -at- mail -dot- ru
 
@@ -26,7 +26,7 @@ Server<ParamProto, Params...>::Server(
     size_t port,
     F payloadCode)
     : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      workingThreads(SettingSelector<1, Params...>::getNumOfWorkers())
+      workingThreads(getNumOfThreads(Cfg::numOfWorkers))
 {
     accept(payloadCode);
 }

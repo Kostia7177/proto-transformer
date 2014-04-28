@@ -34,12 +34,11 @@ int main(
 int doSomething(const RequestData &inBuffer, AnswerData &outBuffer)
 {
     std::string inBufStr = std::string(inBuffer.begin(), inBuffer.end());
+    int retCode = inBufStr != "terminate";
+
     boost::to_upper(inBufStr);
 
     outBuffer = AnswerData(inBufStr.begin(), inBufStr.end());
 
-    const char termCmd[] = "terminate";
-    size_t sizeOfCmd = sizeof(termCmd) - 1;
-
-    return inBuffer.size() < sizeOfCmd || strncmp((const char *)&inBuffer[0], termCmd, sizeOfCmd);
+    return retCode;
 }

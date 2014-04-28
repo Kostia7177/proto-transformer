@@ -38,9 +38,9 @@ int main(
     Durations durations;
     std::mutex locker;
     ServerInstance(port, boost::bind(&doSomething,
-                                     std::ref(durations), 
-                                     std::ref(locker),
-                                     _1, _2, _3, _4, _5));
+                                        std::ref(durations), 
+                                        std::ref(locker),
+                                        _1, _2, _3, _4, _5));
 
     return 0;
 }
@@ -65,16 +65,20 @@ int doSomething(
               std::back_inserter(outBuffer));
 
     uint32_t &numOfRequestsLeft = *getNumPtr(answerHdr);
-    numOfRequestsLeft = sessionSpecific.numOfRequestsLeft -- ;
+    numOfRequestsLeft = -- sessionSpecific.numOfRequestsLeft;
     if (!numOfRequestsLeft)
     {
-        std::stringstream sessionFooter;
         time_t duration = time(0) - sessionSpecific.startedAt;
-        std::lock_guard<std::mutex> lockGuard(lockerRef);
-        auto inserted = durationsRef.insert(duration).first;
-        sessionFooter << std::endl
-                      << " Session duration: " << duration << " second(s); " << std::endl
-                      << " Rating position: "  << std::distance(durationsRef.begin(), inserted) + 1 << "; ";
+        std::stringstream sessionFooter;
+
+        {
+            std::lock_guard<std::mutex> lockGuard(lockerRef);
+            auto inserted = durationsRef.insert(duration).first;
+            sessionFooter << std::endl
+                          << " Session duration: " << duration << " second(s); " << std::endl
+                          << " Rating position: "  << std::distance(durationsRef.begin(), inserted) + 1 << "; ";
+        }
+
         std::string sessionFooterStr = sessionFooter.str();
         std::copy(sessionFooterStr.begin(),
                   sessionFooterStr.end(),
