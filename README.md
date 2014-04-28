@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 Appendix A. Protocol components.
 ~~~~~~~~~~~
 
-Angle bracets contain a default pre-set value.
+  Angle bracets contain a default pre-set value.
 
 	Whole session description
 	- SessionHdrIs<NullType>	- any session invariant; passed to a server
