@@ -27,6 +27,7 @@ Full list of available protocol policies available at the appendix A.
 Second, create your server:
 ------
 
+```cplusplus
 // YourServer.cpp file;
 
 #include <ProtoTransformer/Server.hpp>
@@ -51,21 +52,17 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
 // end of YourServer.cpp file;
-
+```
 Note that the first template parameter in server definition must be a protocol.
 Other (non-protocol parameters) may be follow in a random order. Full list of available non-protocol
 tunings sees at the appendix B.
-
 And third. Create a client.
     -----
-
+```cplusplus
 // YourOwnClient.cpp file
-
 #include <ProtoTransformer/Server.hpp>
 #include "YourOwnProto.hpp"
-
 int main(int argc, char **argv)
 {
 	ProtoTransformer::Client<YourOwnProto> client("host.with.your.server.com", 4242);
@@ -80,12 +77,11 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
 // end of YourOwnClient.cpp file
-
+```
 #Appendix A. Protocol components.
 
-  Angle bracets contain a default pre-set value.
+Angle bracets contain a default pre-set value.
 
 	Whole session description
 	- SessionHdrIs<NullType>	- any session invariant; passed to a server
