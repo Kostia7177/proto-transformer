@@ -6,6 +6,7 @@ proto-transformer
 First, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
 -----
 
+```cpluspllus
 // YourOwnProto.h file
 
 #include <ProtoTransformer/Proto.hpp>
@@ -18,6 +19,7 @@ typedef ProtoTransformer::Proto
     > YourOwnProto;
 
 // end of YourOwnProto.h file;
+```
 
 Order of policies is random.
 Full list of available protocol policies available at the appendix A.
