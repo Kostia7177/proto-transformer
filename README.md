@@ -1,6 +1,10 @@
 proto-transformer
 =================
 
+###What is this
+
+Easy way to make and customize your own application-layer protocol. Just play with it like with a robot-transformer.
+
 ###How to use.
 
 **First**, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
