@@ -16,8 +16,6 @@ typedef ProtoTransformer::Proto
 	UsePolicy<RequestDataReprIs, char>	// request will be a vector<char> now
 	// ... etc;
     > YourOwnProto;
-
-// end of YourOwnProto.h file;
 ```
 
 Order of policies is random.
@@ -50,8 +48,6 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-// end of YourServer.cpp file;
 ```
 Note that the first template parameter in server definition must be a protocol.
 
@@ -78,8 +74,6 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-// end of YourOwnClient.cpp file
 ```
 ###Appendix A. Protocol components.
 
@@ -101,10 +95,10 @@ Angle bracets contain a default pre-set value.
 						  data, just a header will be returned
 						  to a client (signalling that no data
 						  will follow);
---NoAnswerAtAll	- alternately, there is case when no
+*NoAnswerAtAll	- alternately, there is case when no
 						  answer supposed at all - requests-only
 						  protocol;
---NothingIfNoData	- and a case sends nothing if
+*NothingIfNoData	- and a case sends nothing if
 						  no answer data - even header;
 - SetSizeOfAnswer2HdrIs\<Host2NetworkLong>
 - GetSizeOfAnswerFromHdrIs\<Network2HostLong>
