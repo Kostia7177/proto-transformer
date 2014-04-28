@@ -5,6 +5,12 @@ proto-transformer
 
 Easy way to make and customize your own application-layer protocol. Just play with it like with a robot-transformer.
 
+###Installation
+
+Simply copy to /usr/local/include, for example.
+
+cp -R include/ProtoTransformer/ /usr/local/include/
+
 ###How to use.
 
 **First**, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
