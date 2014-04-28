@@ -119,7 +119,7 @@ Angle bracets contain a default pre-set value.
 
 ###Appendix B. Non-protocol components.
 
-- NumOfWorkersIs<Int2Type<hardwareConcurrency>>	- number of parallel sessions;
+- NumOfWorkersIs\<Int2Type\<hardwareConcurrency>>	- number of parallel sessions;
 - ParallelRequestsPerSessionIs<Int2Type<1>>	- has a meaning if SessionThreadPoolIs
 						  points to something multi-threaded
 						  (boost::threadpool, for example)
