@@ -54,8 +54,10 @@ int main(int argc, char **argv)
 // end of YourServer.cpp file;
 ```
 Note that the first template parameter in server definition must be a protocol.
+
 Other (non-protocol parameters) may be follow in a random order. Full list of available non-protocol
 tunings sees at the appendix B.
+
 And **third**. Create a client.
 ```cplusplus
 // YourOwnClient.cpp file
