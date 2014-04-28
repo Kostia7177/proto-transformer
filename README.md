@@ -5,6 +5,10 @@ proto-transformer
 
 Easy way to make and customize your own application-layer protocol. Just play with it like with a robot-transformer.
 
+###Requires
+
+Boost threadpool: http://threadpool.sourceforge.net/ .
+
 ###Installation
 
 Simply copy to /usr/local/include, for example.
