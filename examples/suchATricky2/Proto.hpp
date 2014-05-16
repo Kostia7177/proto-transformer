@@ -8,11 +8,9 @@ namespace ProtoTransformer
 
 typedef Proto
     <
-        UsePolicy<RequestHdrIs, AnyHdr>,
-        UsePolicy<GetSizeOfRequestFromHdrIs, GetRequestSize>,
-        UsePolicy<SetSizeOfRequest2HdrIs, SetRequestSize>,
-        UsePolicy<ServerSendsAnswer, NothingIfNoData>,
+        UsePolicy<RequestHdrIs, AnyHdrWrapped>,
         UsePolicy<RequestDataReprIs, uint32_t>,
+        UsePolicy<ServerSendsAnswer, NothingIfNoData>,
         UsePolicy<AnswerDataReprIs, Answer>
     > ProtoWithAnyHdr;
 

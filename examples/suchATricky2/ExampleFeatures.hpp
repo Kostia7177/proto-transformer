@@ -19,12 +19,10 @@ struct Answer
 uint32_t getHdrField(const AnyHdr &, HdrFieldIndex);
 void setHdrField(uint32_t, AnyHdr &, HdrFieldIndex);
 
-struct GetRequestSize
+struct AnyHdrWrapped
 {
-    uint32_t operator()(const AnyHdr &hdr)const{ return getHdrField(hdr, sizeFieldIdx); }
-};
+    typedef AnyHdr Itself;
 
-struct SetRequestSize
-{
-    void operator()(uint32_t size, AnyHdr &hdr)const{ setHdrField(size, hdr, sizeFieldIdx); }
+    static uint32_t getSize(const AnyHdr &hdr){ return getHdrField(hdr, sizeFieldIdx); }
+    static void setSize2(uint32_t size, AnyHdr &hdr){ setHdrField(size, hdr, sizeFieldIdx); }
 };

@@ -17,25 +17,25 @@ cp -R include/ProtoTransformer/ /usr/local/include/
 
 ###How to use.
 
-**First**, create a header with your own protocol by typedefing the ProtoTransformer::Proto template:
+**First**, create a header and define your protocol within it. Suppose, we want to replace the default value of policy "request data representation" (which is unsigned char) with char, and for "answer data representation" set it to int.
 
-```cpluspllus
+```cplusplus
 // YourOwnProto.h file
 
 #include <ProtoTransformer/Proto.hpp>
 
 typedef ProtoTransformer::Proto
     <
-	// just for example:
-	UsePolicy<RequestDataReprIs, char>	// request will be a vector<char> now
-	// ... etc;
+	UsePolicy<RequestDataReprIs, char>,
+	UsePolicy<AnswerDataReprIs, int>
     > YourOwnProto;
 ```
 
-Order of policies is random.
-Full list of available protocol policies available at the appendix A.
+This new-defined type (actually is a union of traits) must be the first template parameter both of server and client (see below) .
+Policies in the template parameter list are order-independent.
+Full list of available protocol policies are available at the appendix A.
 
-**Second**, create your server:
+**Second**, create your server. Suppose, you've wrote the function 'payload' that takes vector<char> as a request and provides an answer as vector<int> . So,
 
 ```cplusplus
 // YourServer.cpp file;
@@ -43,18 +43,14 @@ Full list of available protocol policies available at the appendix A.
 #include <ProtoTransformer/Server.hpp>
 #include "YourOwnProto.hpp"
 
-int payload(const vector<char> &request, vector<unsigned char> &answer);
+int payload(const vector<char> &request, vector<int> &answer);
 
 int main(int argc, char **argv)
 {
 	typedef ProtoTransformer::
 		Server<
-			// first template parameter must be a protocol;
 	                YourOwnProto,
-			// for example again, after a protocol there may be some non-protocol
-			// tunings in random order;
 	                UsePolicy<SessionManagerIs, SessionManagerWithMap>
-			// ...etc;
                       > YourOwnServer;
 
 	YourOwnServer(4242, payload);	// server will listen a 4242 port
@@ -64,9 +60,8 @@ int main(int argc, char **argv)
 }
 ```
 Note that the first template parameter in server definition must be a protocol.
-
-Other (non-protocol parameters) may be follow in a random order. Full list of available non-protocol
-tunings sees at the appendix B.
+Other parameters (non-protocol tunings, example above shows just one - "session manager" ) are order-independent. Full list of available non-protocol
+tunings see at the appendix B. Read 'Server payload signature rules' to keep accordance between it and a protocol.
 
 And **third**. Create a client.
 ```cplusplus
@@ -74,6 +69,7 @@ And **third**. Create a client.
 
 #include <ProtoTransformer/Server.hpp>
 #include "YourOwnProto.hpp"
+
 int main(int argc, char **argv)
 {
 	ProtoTransformer::Client<YourOwnProto> client("host.with.your.server.com", 4242);
@@ -82,16 +78,70 @@ int main(int argc, char **argv)
 	{
 		vector<char> requestBuffer();
 		// fill a request buffer
-		vector<unsigned char> answer = client.request(requestBuffer);
+		vector<int> answer = client.request(requestBuffer);
 		// do something with an answer;
 	}
 
 	return 0;
 }
 ```
+Much more expressive (but more verbose) examples you can find at the 'examples' directory.
+
+###Server payload signature rules
+What the data could be passed by the server's code to it's payload?
+First, of corse, the request body itself. So,
+
+const vector<RequestDataRepr> &requestData
+
+There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . But if the 'GetSizeOfRequestFromHdr' functor is not the same as 'Network2HostLong' (which is simply wrapping for ntohl()) , we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
+
+const RequestHdr &requestHdr **<--**
+const vector<RequestDataRepr> requestData
+
+Now, if a session header is not 'NullType', we must pass it too.
+
+const SessionHdr &sessionHeader **<--**
+const RequestHdr &requestHdr
+const vector<RequestDataRepr> requestData
+
+There is an ability to keep any cross-requests data, that lives through all the session lifetime, private for this session and available for all it's requests. So -
+
+const SessionHdr &sessionHeader
+const RequestHdr &requestHdr
+const vector<RequestDataRepr> request
+SessionSpecific &sessionSpecific **<--**
+
+Now. Usually, session returns any answer to a client. So, if no NoAnswerAtAll policy specified, payload code will receive the reference to an empty vector wich is to be filled by asnwer data:
+
+const SessionHdr &sessionHeader
+const RequestHdr &requestHdr
+const vector<RequestDataRepr> requestData
+SessionSpecific &sessionSpecific
+vector<AnswerDataRepr> &answerData **<--** where to put an answer
+
+Answer data (the same as request data) can be preceeded by header.
+
+const SessionHdr &sessionHeader
+const RequestHdr &requestHdr
+const vector<RequestDataRepr> requestData
+SessionSpecific &sessionSpecific
+AnswerHdr &answerHdr **<--** where to put answer header
+vector<AnswerDataRepr> &answerData
+
+So, if payload code takes only a request (and no any headers) , not uses session-specific data and not provides any answer, it's sgnature will
+```cplusplus
+int payload(const vector<RequestDataRepr> &);
+```
+and if all theese abilities are used, user's code must have the signature
+
+```cplusplus
+int payload(const SessionHdr &, const RequestHdr &, const vector<RequestReprData> &, SessionSpecific &, AnswerHdr &, vector<AnswerDataRepr> &);
+```
+With the exception of requestData, all other arguments can be omitted - depend on protocol components. But the relative order (preceedence) of them is still the same.
+
 ###Appendix A. Protocol components.
 
-Angle bracets contain a default pre-set value.
+Angle bracets are containing a default pre-set value.
 
 ####Whole session description
 - SessionHdrIs\<NullType>	- any session invariant; passed to a server after connection will be established at the very beginning of the session;
@@ -109,10 +159,14 @@ Angle bracets contain a default pre-set value.
 						  data, just a header will be returned
 						  to a client (signalling that no data
 						  will follow);
+						  
 *NoAnswerAtAll	- alternately, there is case when no
+
 						  answer supposed at all - requests-only
 						  protocol;
+						  
 *NothingIfNoData	- and a case sends nothing if
+
 						  no answer data - even header;
 - SetSizeOfAnswer2HdrIs\<Host2NetworkLong>
 - GetSizeOfAnswerFromHdrIs\<Network2HostLong>

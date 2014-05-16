@@ -26,8 +26,7 @@ void Client<Cfg>::setSizeSw(
     H &hdr, // there is any request header specified,
     const RequestData &data)
 {           // so we can set the request size into it;
-    typename Cfg::SetSizeOfRequest2Hdr setSizeOfRequest2Hdr;
-    setSizeOfRequest2Hdr(data.size() * sizeof(typename Cfg::RequestDataRepr), hdr);
+    Cfg::RequestHdr::setSize2(data.size() * sizeof(typename Cfg::RequestDataRepr), hdr);
 }
 
 template<class Cfg>
@@ -61,8 +60,7 @@ void Client<Cfg>::readAnswerSw(
     const AnyAnswerCanBe &)
 {
     read(ioSocket, boost::asio::buffer(&answerHdr, sizeof(answerHdr)));
-    typename Cfg::GetSizeOfAnswerFromHdr getSizeOfAnswerFromHdr;
-    if (uint32_t sizeOfAnswer = getSizeOfAnswerFromHdr(answerHdr) / sizeof(typename Cfg::AnswerDataRepr))
+    if (uint32_t sizeOfAnswer = Cfg::AnswerHdr::getSize(answerHdr) / sizeof(typename Cfg::AnswerDataRepr))
     {
         answer.resize(sizeOfAnswer);
         read(ioSocket, boost::asio::buffer(answer));
@@ -85,9 +83,9 @@ Client<Cfg>::Client(
 
 template<class Cfg>
 const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    typename Cfg::RequestHdr &requestHdr,
+    RequestHdr &requestHdr,
     const RequestData &data,
-    typename Cfg::AnswerHdr *answerHdr,
+    AnswerHdr *answerHdr,
     AnswerAwaiting answerAwaiting)
 {
     setSizeSw(requestHdr, data);
@@ -102,11 +100,11 @@ const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
 
 template<class Cfg>
 const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    typename Cfg::RequestHdr &requestHdr,
+    RequestHdr &requestHdr,
     const RequestData &data,
     AnswerAwaiting answerAwaiting)
 {
-    typename Cfg::AnswerHdr answerHdr;
+    AnswerHdr answerHdr;
     request(requestHdr, data, &answerHdr, answerAwaiting);
     return answer;
 }
@@ -114,10 +112,10 @@ const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
 template<class Cfg>
 const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
     const RequestData &data,
-    typename Cfg::AnswerHdr *answerHdr,
+    AnswerHdr *answerHdr,
     AnswerAwaiting answerAwaiting)
 {
-    typename Cfg::RequestHdr requestHdr;
+    RequestHdr requestHdr;
     request(requestHdr, data, answerHdr, answerAwaiting);
     return answer;
 }
@@ -127,8 +125,8 @@ const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
     const RequestData &data,
     AnswerAwaiting answerAwaiting)
 {
-    typename Cfg::RequestHdr requestHdr;
-    typename Cfg::AnswerHdr answerHdr;
+    RequestHdr requestHdr;
+    AnswerHdr answerHdr;
     request(requestHdr, data, &answerHdr, answerAwaiting);
     return answer;
 }

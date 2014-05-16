@@ -1,9 +1,7 @@
 #pragma once
 
 #include <string.h>
-#include "Tools.hpp"
-#include "AnswerCases.hpp"
-#include "ThreadPoolWrapper.hpp"
+#include "Wrappers.hpp"
 
 #define AndAnyBase , class Base = NullType
 #define DerivedFromBase : virtual public Base
@@ -11,7 +9,7 @@
 template<class T AndAnyBase>
 struct SessionHdrIs DerivedFromBase
 {
-    typedef typename EmptyOrNot<T, IsTransferable<T>::value>::type SessionHdr;
+    typedef T SessionHdr;
     enum { proto = 1 };
 };
 
@@ -32,21 +30,7 @@ struct InitSessionSpecificIs DerivedFromBase
 template<class T AndAnyBase>
 struct RequestHdrIs DerivedFromBase
 {
-    typedef typename EmptyOrNot<T, IsTransferable<T>::value>::type RequestHdr;
-    enum { proto = 1 };
-};
-
-template<class T AndAnyBase>
-struct GetSizeOfRequestFromHdrIs DerivedFromBase
-{
-    typedef T GetSizeOfRequestFromHdr;
-    enum { proto = 1 };
-};
-
-template<class T AndAnyBase>
-struct SetSizeOfRequest2HdrIs DerivedFromBase
-{
-    typedef T SetSizeOfRequest2Hdr;
+    typedef typename Wrappers::ForDataHeader<T>::Type RequestHdr;
     enum { proto = 1 };
 };
 
@@ -68,22 +52,15 @@ struct RequestDataReprIs DerivedFromBase
 template<typename T AndAnyBase>
 struct AnswerHdrIs DerivedFromBase
 {
-    typedef typename EmptyOrNot<T, IsTransferable<T>::value>::type AnswerHdr;
+    typedef typename Wrappers::ForDataHeader<T>::Type AnswerHdr;
     enum { proto = 1 };
 };
 
 template<class T AndAnyBase>
-struct SetSizeOfAnswer2HdrIs DerivedFromBase
+struct ServerSpaceIs DerivedFromBase
 {
-    typedef T SetSizeOfAnswer2Hdr;
-    enum { proto = 1 };
-};
-
-template<class T AndAnyBase>
-struct GetSizeOfAnswerFromHdrIs DerivedFromBase
-{
-    typedef T GetSizeOfAnswerFromHdr;
-    enum { proto = 1 };
+    typedef T ServerSpace;
+    enum { proto = 0 };
 };
 
 template<class T AndAnyBase>
@@ -126,7 +103,7 @@ template<class T AndAnyBase>
 struct SessionThreadPoolIs DerivedFromBase
 {
     typedef T SessionThreadPool;
-    typedef ThreadPoolWrapper<SessionThreadPool> TaskManager;
+    typedef Wrappers::ForThreadPool<SessionThreadPool> TaskManager;
     enum { proto = 0 };
 };
 
@@ -151,26 +128,9 @@ struct ParallelRequestsPerSessionIs DerivedFromBase
     enum { proto = 0 };
 };
 
-class ReadUntilNull
+template<class T AndAnyBase>
+struct LoggerIs DerivedFromBase
 {
-    typedef std::vector<char> DataBuffer;
-
-    size_t doIt(const DataBuffer &dataBuffer, size_t offset, size_t numOfBytes)
-    {
-        if (!numOfBytes) { return 0; }
-        typedef DataBuffer::value_type DataRepr;
-        DataRepr *endOfStr = (DataRepr *)memchr(&dataBuffer[offset], 0, numOfBytes - offset);
-        if (endOfStr){ return (endOfStr + 1) - &dataBuffer[0]; }
-        return 0;
-    }
-    public:
-    template<typename SessionHdr>
-    size_t operator()(const DataBuffer &dataBuffer, size_t offset, size_t numOfBytes, const SessionHdr &)
-    {
-        return doIt(dataBuffer, offset, numOfBytes);
-    }
-    size_t operator()(const DataBuffer &dataBuffer, size_t offset, size_t numOfBytes)
-    {
-        return doIt(dataBuffer, offset, numOfBytes);
-    }
+    typedef Wrappers::ForLogger<T> Logger;
+    enum { proto = 0 };
 };

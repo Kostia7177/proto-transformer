@@ -18,14 +18,14 @@ struct TaskData
     // processing, i.e. with parallelRequestsPerSession != 1
     // and SessionThreadPool != NullType);
     //
-    typename Cfg::RequestHdr requestHdr;            // -- request description;
+    typename Cfg::RequestHdr::Itself requestHdr;            // -- request description;
                                                     //    in main case contains
                                                     //    a simple size of a request;
                                                     //    if it so, not will be
                                                     //    passed to a payload code;
     typedef std::vector<typename Cfg::RequestDataRepr> Request;
     Request inDataBuffer;                           // -- request data itself;
-    typename Cfg::AnswerHdr answerHdr;              // -- the same as requestHdr, but
+    typename Cfg::AnswerHdr::Itself answerHdr;              // -- the same as requestHdr, but
                                                     //    for answer;
     typedef std::vector<typename Cfg::AnswerDataRepr> Answer;
     Answer outDataBuffer;                           // -- guess what :)
@@ -52,6 +52,33 @@ struct TaskData
     }
 };
 
+template<class Cfg, class S>
+struct SessionAdministration
+{
+    // a thing that controls the reading,
+    // if no the request size is known...
+    typedef typename Cfg::
+                     ReadingManager::
+                     template Itself<typename Cfg::RequestCompletion,
+                                     typename Cfg::RequestDataRepr> RequestReadingManager;
+    RequestReadingManager readingManager;
+    // ...but it's completion can be recognized
+    // while reading the request body - the following
+    // is a user-defined code, that it provides;
+    typedef typename RequestReadingManager::Completion RequestCompletion;
+
+    typedef typename Cfg::SessionManager::template Reference<S> ExitManager;
+    ExitManager exitManager;
+    typename Cfg::TaskManager taskManager;
+
+    typename Cfg::Logger logger;
+
+    template<class B>
+    SessionAdministration(B &buffer)
+        : readingManager(buffer),
+          taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)){}
+};
+
 template<class Cfg>
 class Session
     : public std::enable_shared_from_this<Session<Cfg>>
@@ -73,27 +100,17 @@ class Session
                                                             // that initialises session-
                                                             // specific (may be by
                                                             // session header);
+    typedef typename Cfg::ServerSpace ServerSpace;
+    ServerSpace *serverSpace;
     typedef TaskData<Cfg> TaskBuffers;
     TaskBuffers taskBuffers;                        // -- aggregated request and answer
                                                     //    headers and data buffers;
 
+    typedef SessionAdministration<Cfg, Session<Cfg>> Administration;
+    Administration administration;
+    typename Administration::RequestCompletion requestCompletion;
+
     SocketPtr ioSocketPtr;
-
-    // a thing that controls the reading,
-    // if no the request size is known...
-    typedef typename Cfg::
-                     ReadingManager::
-                     template Itself<typename Cfg::RequestCompletion,
-                                     typename Cfg::RequestDataRepr> RequestReadingManager;
-    RequestReadingManager readingManager;
-    // ...but it's completion can be recognized
-    // while reading the request body - the following
-    // is a user-defined code, that it provides;
-    typename RequestReadingManager::Completion requestCompletion;
-
-    typedef typename Cfg::SessionManager::template Reference<Session> ManagerReference;
-    ManagerReference manager;
-    typename Cfg::TaskManager taskManager;
 
     Session(const Session &);
     Session &operator= (const Session &);
@@ -141,15 +158,15 @@ class Session
 
     public:
 
-    Session(Cfg cfg, SocketPtr arg)
-        : ioSocketPtr(arg),
-          readingManager(taskBuffers.inDataBuffer),
-          taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)){}
+    Session(Cfg cfg, SocketPtr socketPtrArg, ServerSpace *serverSpaceArg)
+        : ioSocketPtr(socketPtrArg),
+          serverSpace(serverSpaceArg),
+          administration(taskBuffers.inDataBuffer){}
     ~Session(){}
 
     template<class F> void run(F);
 
-    ManagerReference &getManagerReference() { return manager; }
+    typename Administration::ExitManager &getManagerReference() { return administration.exitManager; }
 };
 
 }

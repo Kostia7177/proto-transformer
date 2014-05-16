@@ -1,9 +1,11 @@
 #pragma once
 
-#include "detail/PreSettings.hpp"
+#include "detail/CfgComponents.hpp"
+#include "detail/ReadUntilNull.hpp"
+#include "detail/AnswerCases.hpp"
 #include "detail/SessionManagers/WithMap.hpp"
 #include "detail/SessionManagers/Empty.hpp"
-#include "detail/PureHdr.hpp"
+#include "detail/JustSize.hpp"
 #include "detail/ReadingManager.hpp"
 #include <threadpool.hpp>
 
@@ -22,11 +24,9 @@ typedef Params2Hierarchy
         SessionHdrIs<NullType>,
         //
         //  -- request
-        RequestHdrIs<PureHdr>,  // by default is uint32_t and is to be calculated
+        RequestHdrIs<JustSize>,  // by default is uint32_t and is to be calculated
                                 // automatically as a size of request data buffer;
-                                // see the PureHdr.hpp file;
-        GetSizeOfRequestFromHdrIs<Network2HostLong>,    // by default is ntohl();
-        SetSizeOfRequest2HdrIs<Host2NetworkLong>,       // by default is htonl();
+                                // see the JustSize.hpp file;
         //
         RequestCompletionIs<NullType>,  // user can specify a request-completion
                                         // function instead of request header;
@@ -46,10 +46,8 @@ typedef Params2Hierarchy
                                             // no answer data - even header;
                                             // see AnswerCases.hpp file;
         //
-        AnswerHdrIs<PureHdr>,               // the following is the same as for
+        AnswerHdrIs<JustSize>,               // the following is the same as for
                                             // request, but for answer;
-        SetSizeOfAnswer2HdrIs<Host2NetworkLong>,
-        GetSizeOfAnswerFromHdrIs<Network2HostLong>,
         AnswerCompletionIs<NullType>,
         AnswerDataReprIs<unsigned char>,
 
@@ -70,6 +68,7 @@ typedef Params2Hierarchy
         InitSessionSpecificIs<NullType>,    // function that initializes session
                                             // specific (may be by session-header
                                             // data or it's part);
+        ServerSpaceIs<NullType>,
         //
         SessionManagerIs<EmptyManager>, // empty (by default); starts the session
                                         // and forget about it - session will be
@@ -82,6 +81,7 @@ typedef Params2Hierarchy
         //
         ServerThreadPoolIs<boost::threadpool::pool>,
         SessionThreadPoolIs<NullType>,
+        LoggerIs<NullType>,
         ReadingManagerIs<ReadingManager>    // that thing, that manages the reading
                                             // when no request size is known (not a
                                             // completion function! just what it calls!

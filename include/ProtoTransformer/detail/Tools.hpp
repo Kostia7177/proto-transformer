@@ -82,12 +82,9 @@ struct IsTransferable<T,
                       false,
                       true>
 {
-    template<class Base> class ParamDerived : public Base { char c; };
-    static const bool value = sizeof(ParamDerived<T>) > sizeof(ParamDerived<NullType>);
+    template<class Base> class Derived : public Base { char c; };
+    static const bool value = sizeof(Derived<T>) > sizeof(Derived<NullType>);
 };
-
-template<class T, bool toggle> struct EmptyOrNot { typedef T type; };
-template<class T> struct EmptyOrNot<T, false> { typedef NullType type; };
 
 enum { hardwareConcurrency = 0 };
 unsigned int getNumOfThreads(unsigned int numOf)

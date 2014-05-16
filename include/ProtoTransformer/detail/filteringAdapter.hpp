@@ -13,34 +13,74 @@
 
 // the following is a 'working body' for the
 // 'Params2FilteredHierarchyCore' see (**)
-template<int idx, typename T, int uniquizer>
-struct Binder
-{   // common case; puts 'T' as a payload field;
-    // 'length' plays a double role. it calculates
-    // an index that will be passed to the next
-    // field, and - at the last field of hierarhy -
-    // equals an 'actual length' of it (number of
-    // meaningfull fields it contains)
-    enum { lenght = idx + 1, pos = lenght };
+template<typename T>
+struct BinderBase
+{
     typedef T Type;
-    Type &value;
-    Binder() {}
-    Binder(Type &arg) : value(arg) {}
-    // 'Get' and 'get' are accessible at the last
+    // 'Get' is accessible at the last
     // field of hierarchy - see (***). within all
-    // other cases they are hiden by derived;
+    // other cases it is hiden by same name
+    // whithin derived;
     template<int> struct Get { typedef T Type; };
+};
+template<int idx, typename T, int uniquizer>
+struct Binder : BinderBase<T &>
+{   // common case; puts a reference to 'T' as
+    // a payload field;
+    //
+    // (****) 'length' plays a double role. it
+    // calculates an index that will be passed
+    // to the next field, and - at the last field
+    // of hierarhy - equals an 'actual length' of
+    // it (number of meaningfull fields it contains)
+    enum { lenght = idx + 1, pos = lenght };
+
+    T &value;
+    Binder(T &arg) : value(arg) {}
+    // (*****) 'get' is accessible at the last field
+    // of hierarchy - see (***). within all other
+    // cases it is hiden by the same name whithin
+    // derived;
     template<int> T &get() { return value; }
+};
+
+template<int idx, typename Pointee, int uniquizer>
+struct Binder<idx, Pointee *, uniquizer>
+    : BinderBase<Pointee *>
+{   // pointers must be represented as is,
+    // not as referenses;
+    //
+    // see (****);
+    enum { lenght = idx + 1, pos = lenght };
+
+    Pointee *value;
+    Binder(Pointee *arg) : value(arg) {}
+    // see (*****);
+    template<int> Pointee *get() { return value; }
 };
 
 template<int idx, int uniquizer>
 struct Binder<idx, NullType, uniquizer>
+    : BinderBase<NullType>
 {   // hiding the meanless 'NullType'
     enum { lenght = idx, pos = lenght };
-    typedef NullType Type;
-    Binder(){}
-    Binder(NullType){}
-    template<int> struct Get { typedef NullType Type; };
+    Binder(NullType) {}
+};
+
+template<int idx, int uniquizer>
+struct Binder<idx, const NullType, uniquizer>
+    : BinderBase<const NullType &>
+{
+    enum { lenght = idx, pos = lenght };
+    Binder(NullType) {}
+};
+
+template<int idx, int uniquizer>
+struct Binder<idx, NullType *, uniquizer>
+    : BinderBase<NullType *>
+{
+    enum { lenght = idx, pos = lenght };
+    Binder(NullType *) {}
 };
 
 // (**)
@@ -106,20 +146,22 @@ class Params2FilteredHierarchyCore<idx, uniquizer, Head, Tail...>
         Type(Head &head, Tail &... tail) : BinderLocal(head), FollowingFields(tail...) {}
 
         template<int pos>
-        typename Get<pos>::Type &get()
+        typename Get<pos>::Type get()
         {
             typedef Int2Type<pos == BinderLocal::pos
                              && std::is_same<typename BinderLocal::Type,
                                              NullType>::value == false
-                             && std::is_same<typename BinderLocal::Type ,
+                             && std::is_same<typename BinderLocal::Type,
+                                             const NullType>::value == false
+                             && std::is_same<typename BinderLocal::Type,
                                              size_t>::value == false> Switcher;
             Switcher switcher;
             return getSw<pos>(switcher); 
         }
 
         private:
-        template<int pos> typename Get<pos>::Type &getSw(const Int2Type<false> &){ return FollowingFields::template get<pos>(); }
-        template<int pos> typename Get<pos>::Type &getSw(const Int2Type<true> &){ return BinderLocal::value; }
+        template<int pos> typename Get<pos>::Type getSw(const Int2Type<false> &){ return FollowingFields::template get<pos>(); }
+        template<int pos> typename Get<pos>::Type getSw(const Int2Type<true> &){ return BinderLocal::value; }
     };
 };
 
@@ -129,11 +171,29 @@ class Params2FilteredHierarchy
     // like the first 2 template parameters (integers)
     typedef typename Params2FilteredHierarchyCore<0, 0, Params...>::Type Core;
     Core core;
+
     public:
     Params2FilteredHierarchy(Params &... params) : core(params...) {}
     enum { lenght = Core::lenght };
+    template<int pos> using FieldType = typename Core::template Get<pos>::Type;
     // accessing the hierarchy's field number 'pos' (starts with 1)
-    template<int pos> typename Core::template Get<pos>::Type &field(){ return core.template get<pos>(); }
+    template<int pos> FieldType<pos> field(){ return core.template get<pos>(); }
+};
+
+template<class RetType, class... Params>
+struct SignatureChecker
+{
+    using FGood = RetType(Params...);
+
+    template<class F>
+    SignatureChecker(F *f2Check)
+    {
+        static_assert(std::is_same<FGood, F>::value,
+                      "Signature of a function does not match the requirements! ");
+        FGood *fGood = f2Check;
+    }
+
+    template<class F> SignatureChecker(F) {}
 };
 
 // a number of overloads of 'expandingAdapter(...)' -
@@ -149,6 +209,9 @@ int expandingAdapter(
     Int2Type<1>)            // lenght of parameters list (here is for
                             // 1 parameter);
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>> check(f);
+
     return f(paramsList.template field<1>());
 }
 
@@ -158,6 +221,7 @@ int expandingAdapter(
     ParamsList &,
     Int2Type<0>)            // oh well sorry, of corse...
 {
+    SignatureChecker<int> check(f);
     return f();
 }
 
@@ -167,6 +231,10 @@ int expandingAdapter(
     ParamsList &paramsList,
     Int2Type<2>)
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>> check(f);
+
     return f(paramsList.template field<1>(),
              paramsList.template field<2>());
 }
@@ -177,6 +245,11 @@ int expandingAdapter(
     ParamsList &paramsList,
     Int2Type<3>)
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>,
+                     typename ParamsList::template FieldType<3>> check(f);
+
     return f(paramsList.template field<1>(),
              paramsList.template field<2>(),
              paramsList.template field<3>());
@@ -188,6 +261,12 @@ int expandingAdapter(
     ParamsList &paramsList,
     Int2Type<4>)
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>,
+                     typename ParamsList::template FieldType<3>,
+                     typename ParamsList::template FieldType<4>> check(f);
+
     return f(paramsList.template field<1>(),
              paramsList.template field<2>(),
              paramsList.template field<3>(),
@@ -200,6 +279,13 @@ int expandingAdapter(
     ParamsList &paramsList,
     Int2Type<5>)
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>,
+                     typename ParamsList::template FieldType<3>,
+                     typename ParamsList::template FieldType<4>,
+                     typename ParamsList::template FieldType<5>> check(f);
+
     return f(paramsList.template field<1>(),
              paramsList.template field<2>(),
              paramsList.template field<3>(),
@@ -213,12 +299,44 @@ int expandingAdapter(
     ParamsList &paramsList,
     Int2Type<6>)
 {
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>,
+                     typename ParamsList::template FieldType<3>,
+                     typename ParamsList::template FieldType<4>,
+                     typename ParamsList::template FieldType<5>,
+                     typename ParamsList::template FieldType<6>> check(f);
+
     return f(paramsList.template field<1>(),
              paramsList.template field<2>(),
              paramsList.template field<3>(),
              paramsList.template field<4>(),
              paramsList.template field<5>(),
              paramsList.template field<6>());
+}
+
+template<class F, class ParamsList>
+int expandingAdapter(
+    F f,
+    ParamsList &paramsList,
+    Int2Type<7>)
+{
+    SignatureChecker<int,
+                     typename ParamsList::template FieldType<1>,
+                     typename ParamsList::template FieldType<2>,
+                     typename ParamsList::template FieldType<3>,
+                     typename ParamsList::template FieldType<4>,
+                     typename ParamsList::template FieldType<5>,
+                     typename ParamsList::template FieldType<6>,
+                     typename ParamsList::template FieldType<7>> check(f);
+
+    return f(paramsList.template field<1>(),
+             paramsList.template field<2>(),
+             paramsList.template field<3>(),
+             paramsList.template field<4>(),
+             paramsList.template field<5>(),
+             paramsList.template field<6>(),
+             paramsList.template field<7>());
 }
 // ...continue for more number of fields when it
 // will be needed;

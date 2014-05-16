@@ -14,13 +14,9 @@ int usage(
 
 using namespace ProtoTransformer;
 
-struct Durations
-{
-    std::set<time_t> themselves;
-    std::mutex locker;
-};
+typedef std::set<time_t> Durations;
 
-int doSomething(const AnySessionHdr &, const RequestData &, AnySessionSpecific &sessionSpecific, AnyAnswerHdr &, AnswerData &, Durations *);
+int doSomething(Durations &, std::mutex &, const AnySessionHdr &, const RequestData &, AnySessionSpecific &sessionSpecific, AnyAnswerHdr &, AnswerData &);
 
 int main(
     int argc,
@@ -36,23 +32,27 @@ int main(
 
     typedef Server<ProtoWithSessionHdr,
                    UsePolicy<SessionSpecificIs, AnySessionSpecific>,
-                   UsePolicy<InitSessionSpecificIs, InitAnySessionSpecific>,
-                   UsePolicy<ServerSpaceIs, Durations>
+                   UsePolicy<InitSessionSpecificIs, InitAnySessionSpecific>
                   > ServerInstance;
 
     Durations durations;
-    ServerInstance(port, doSomething, &durations);
+    std::mutex locker;
+    ServerInstance(port, boost::bind(&doSomething,
+                                     std::ref(durations), 
+                                     std::ref(locker),
+                                     _1, _2, _3, _4, _5));
 
     return 0;
 }
 
 int doSomething(
+    Durations &durationsRef,
+    std::mutex &lockerRef,
     const AnySessionHdr &sessionHdr,
     const RequestData &inBuffer,
     AnySessionSpecific &sessionSpecific,
     AnyAnswerHdr &answerHdr,
-    AnswerData &outBuffer,
-    Durations *durations)
+    AnswerData &outBuffer)
 {
     const char *tag = "At a session named ";
     outBuffer = AnswerData(tag, tag + strlen(tag));
@@ -72,11 +72,11 @@ int doSomething(
         std::stringstream sessionFooter;
 
         {
-            std::lock_guard<std::mutex> lockGuard(durations->locker);
-            auto inserted = durations->themselves.insert(duration).first;
+            std::lock_guard<std::mutex> lockGuard(lockerRef);
+            auto inserted = durationsRef.insert(duration).first;
             sessionFooter << std::endl
                           << " Session duration: " << duration << " second(s); " << std::endl
-                          << " Rating position: "  << std::distance(durations->themselves.begin(), inserted) + 1 << "; ";
+                          << " Rating position: "  << std::distance(durationsRef.begin(), inserted) + 1 << "; ";
         }
 
         std::string sessionFooterStr = sessionFooter.str();

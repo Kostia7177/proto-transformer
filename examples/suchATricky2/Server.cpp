@@ -13,7 +13,7 @@ int usage(
 
 using namespace ProtoTransformer;
 
-int doSomething(AnyHdr &, const RequestData &, AnswerData &);
+int doSomething(const AnyHdr &, const RequestData &, AnswerData &);
 
 int main(
     int argc,
@@ -38,7 +38,7 @@ int main(
 }
 
 int doSomething(
-    AnyHdr &hdr,
+    const AnyHdr &hdr,
     const RequestData &inBuffer,
     AnswerData &outBuffer)
 {

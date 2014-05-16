@@ -24,16 +24,19 @@ template<class ParamProto, class... Params>
 template<class F>
 Server<ParamProto, Params...>::Server(
     size_t port,
-    F payloadCode)
+    F payloadCode,
+    ServerSpace *inServerSpace)
     : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      workingThreads(getNumOfThreads(Cfg::numOfWorkers))
+      workingThreads(getNumOfThreads(Cfg::numOfWorkers)),
+      serverSpace(inServerSpace)
 {
     accept(payloadCode);
 }
 
 template<class ParamProto, class... Params>
 template<class F>
-void Server<ParamProto, Params...>::accept(F payload)
+void Server<ParamProto, Params...>::accept(
+    F payload)
 {
     sessionManagerPtr = SessionManagerPtr(new SessionManager);
     startAccepting(Cfg(), payload, sessionManagerPtr);
@@ -54,7 +57,7 @@ void Server<Proto, Params...>::startAccepting(
                           {
                               if (!errorCode)
                               {
-                                  sessionManagerPtr->startSession(std::make_shared<Session<Cfg>>(cfg, newSocketPtr), payload);
+                                  sessionManagerPtr->startSession(std::make_shared<Session<Cfg>>(cfg, newSocketPtr, serverSpace), payload);
                                   startAccepting(cfg, payload, sessionManagerPtr);
                               }
                               else { stop(); }

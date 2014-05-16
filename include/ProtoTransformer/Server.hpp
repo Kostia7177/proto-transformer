@@ -39,7 +39,7 @@ class Server
     // ...first, let's check Proto consistence...
     enum
     {
-        requestHdrNotDefined        = std::is_same<typename ParamProto::RequestHdr, NullType>::value,
+        requestHdrNotDefined        = std::is_same<typename ParamProto::RequestHdr::Itself, NullType>::value,
         requestCompletionNotDefined = std::is_same<typename ParamProto::RequestCompletion, NullType>::value
     };
     static_assert(requestHdrNotDefined || requestCompletionNotDefined,
@@ -73,6 +73,8 @@ class Server
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::acceptor acceptor;
     typename Cfg::ServerThreadPool workingThreads;
+    typedef typename Cfg::ServerSpace ServerSpace;
+    ServerSpace *serverSpace;
 
     typedef typename Cfg::SessionManager::template Itself<Session<Cfg>> SessionManager;
     typedef std::shared_ptr<SessionManager> SessionManagerPtr;
@@ -86,9 +88,10 @@ class Server
 
     public:
 
-    Server(size_t port, size_t numOfWorkers)
-        : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)){}
-    template<class F> Server(size_t port, F);
+    Server(size_t port, size_t numOfWorkers, ServerSpace *inServerSpace = 0)
+        : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+          serverSpace(inServerSpace){}
+    template<class F> Server(size_t port, F, ServerSpace * = 0);
     ~Server(){}
 
     template<class F> void accept(F);

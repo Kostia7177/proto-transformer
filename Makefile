@@ -19,18 +19,19 @@ CFLAGS += -g -std=c++11 -Iinclude
 
 .SECONDEXPANSION:
 
-%.oServer:		%.cpp \
-			include/ProtoTransformer/Server.hpp \
+%.oServer:	%.cpp \
+		include/ProtoTransformer/Server.hpp \
 			include/ProtoTransformer/detail/Server.tcc \
 			include/ProtoTransformer/detail/Session.tcc \
 			include/ProtoTransformer/detail/Session.hpp \
+		include/ProtoTransformer/detail/filteringAdapter.hpp \
 			$$(@D)/Proto.hpp \
 			$$(shell ls include/ProtoTransformer/detail/SessionManagers/*) \
 			$$(call GetExampleFeatures,$$(@D),hpp)
 	$(ProvideObj)
 
 %.oClient:		%.cpp \
-			include/ProtoTransformer/Client.hpp  \
+			include/ProtoTransformer/Client.hpp \
 			include/ProtoTransformer/detail/Client.tcc \
 			$$(@D)/Proto.hpp \
 		$$(call GetExampleFeatures,$$(@D),hpp)

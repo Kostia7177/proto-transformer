@@ -32,9 +32,10 @@ enum AnswerAwaiting { oneWayRequest, answerSupposed };
 template<class Cfg>
 class Client
 {
+    typedef typename Cfg::AnswerHdr::Itself AnswerHdr;
     enum
     {
-        answerHdrNotDefined        = std::is_same<typename Cfg::AnswerHdr, NullType>::value,
+        answerHdrNotDefined        = std::is_same<AnswerHdr, NullType>::value,
         answerCompletionNotDefined = std::is_same<typename Cfg::AnswerCompletion, NullType>::value
     };
     static_assert(answerHdrNotDefined || answerCompletionNotDefined,
@@ -45,6 +46,7 @@ class Client
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::socket ioSocket;
     boost::asio::ip::tcp::endpoint endPoint;
+    typedef typename Cfg::RequestHdr::Itself RequestHdr;
     typedef typename Cfg::RequestData RequestData;
     typedef typename Cfg::AnswerData AnswerData;
     AnswerData answer;
@@ -79,9 +81,9 @@ class Client
     Client(const std::string &, int, SessionHdr = SessionHdr());
     ~Client(){}
 
-    const AnswerData &request(typename Cfg::RequestHdr &, const RequestData &, typename Cfg::AnswerHdr *, AnswerAwaiting = answerSupposed);
-    const AnswerData &request(typename Cfg::RequestHdr &, const RequestData &, AnswerAwaiting = answerSupposed);
-    const AnswerData &request(const RequestData &, typename Cfg::AnswerHdr *, AnswerAwaiting = answerSupposed);
+    const AnswerData &request(RequestHdr &, const RequestData &, AnswerHdr *, AnswerAwaiting = answerSupposed);
+    const AnswerData &request(RequestHdr &, const RequestData &, AnswerAwaiting = answerSupposed);
+    const AnswerData &request(const RequestData &, AnswerHdr *, AnswerAwaiting = answerSupposed);
     const AnswerData &request(const RequestData &, AnswerAwaiting = answerSupposed);
 };
 
