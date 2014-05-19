@@ -96,36 +96,51 @@ const vector<RequestDataRepr> &requestData
 There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . But if the 'GetSizeOfRequestFromHdr' functor is not the same as 'Network2HostLong' (which is simply wrapping for ntohl()) , we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
 
 const RequestHdr &requestHdr **<--**
+
 const vector<RequestDataRepr> requestData
 
 Now, if a session header is not 'NullType', we must pass it too.
 
 const SessionHdr &sessionHeader **<--**
+
 const RequestHdr &requestHdr
+
 const vector<RequestDataRepr> requestData
 
 There is an ability to keep any cross-requests data, that lives through all the session lifetime, private for this session and available for all it's requests. So -
 
 const SessionHdr &sessionHeader
+
 const RequestHdr &requestHdr
+
 const vector<RequestDataRepr> request
+
 SessionSpecific &sessionSpecific **<--**
 
 Now. Usually, session returns any answer to a client. So, if no NoAnswerAtAll policy specified, payload code will receive the reference to an empty vector wich is to be filled by asnwer data:
 
 const SessionHdr &sessionHeader
+
 const RequestHdr &requestHdr
+
 const vector<RequestDataRepr> requestData
+
 SessionSpecific &sessionSpecific
+
 vector<AnswerDataRepr> &answerData **<--** where to put an answer
 
 Answer data (the same as request data) can be preceeded by header.
 
 const SessionHdr &sessionHeader
+
 const RequestHdr &requestHdr
+
 const vector<RequestDataRepr> requestData
+
 SessionSpecific &sessionSpecific
+
 AnswerHdr &answerHdr **<--** where to put answer header
+
 vector<AnswerDataRepr> &answerData
 
 So, if payload code takes only a request (and no any headers) , not uses session-specific data and not provides any answer, it's sgnature will
