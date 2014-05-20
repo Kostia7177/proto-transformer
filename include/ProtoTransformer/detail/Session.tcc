@@ -226,7 +226,7 @@ template<class Cfg>
 template<class InitSessionSpecific>
 void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
 {
-    filteringAdapter(f, static_cast<const typename Cfg::SessionHdr &>(sessionHdr), sessionSpecific);
+    filteringAdapter(f, sessionHdr, sessionSpecific);
 }
 
 }
