@@ -183,17 +183,23 @@ class Params2FilteredHierarchy
 template<class RetType, class... Params>
 struct SignatureChecker
 {
-    using FGood = RetType(Params...);
-
     template<class F>
     SignatureChecker(F *f2Check)
     {
+        using FGood = RetType(Params...);
+
         static_assert(std::is_same<FGood, F>::value,
-                      "Signature of a function does not match the requirements! ");
+                      "Signature of a function does not match the context types requirements! ");
         FGood *fGood = f2Check;
     }
 
-    template<class F> SignatureChecker(F) {}
+    template<class PassedAsFunctor>
+    SignatureChecker(PassedAsFunctor)
+    {
+        using DefinedByContextTypesOperator = RetType(PassedAsFunctor::*)(Params...);
+        // not any idea for the static assert condition here...
+        DefinedByContextTypesOperator definedByContextTypesOperator = &PassedAsFunctor::operator();
+    }
 };
 
 // a number of overloads of 'expandingAdapter(...)' -

@@ -9,6 +9,9 @@
 template<class T AndAnyBase>
 struct SessionHdrIs DerivedFromBase
 {
+    static_assert(IsTransferable<T>::value == true
+                  || std::is_same<T, NullType>::value == true,
+                  "Session header must be either something transferable (arithmetic or pod) or NullType. ");
     typedef T SessionHdr;
     enum { proto = 1 };
 };
