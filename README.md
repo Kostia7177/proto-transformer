@@ -128,7 +128,7 @@ Answer data (the same as request data) can be preceeded by header.
 + AnswerHdr &answerHdr **<--** where to put answer header
 + vector<AnswerDataRepr> &answerData
 
-If any objects of a server address space are desired to be available for all requests of all sessions, it is recommended to aggregate them to any structure and to pass to a payload code as one object.
+If any objects of a server address space are desired to be available for all requests of all sessions, it is recommended to aggregate them to any structure and to pass to a payload code as one object (see suchATricky1 for example) .
 
 1. const SessionHdr &sessionHeader
 1. const RequestHdr &requestHdr
@@ -147,7 +147,13 @@ int payload(const vector<RequestDataRepr> &);
 and if all theese abilities are used, user's code must have the signature
 
 ```cplusplus
-int payload(const SessionHdr &, const RequestHdr &, const vector<RequestReprData> &, SessionSpecific &, AnswerHdr &, vector<AnswerDataRepr> &, ServerSpace *);
+int payload(const SessionHdr &,
+            const RequestHdr &,
+            const vector<RequestReprData> &,
+            SessionSpecific &,
+            AnswerHdr &,
+            vector<AnswerDataRepr> &,
+            ServerSpace *);
 ```
 With the exception of requestData, all other arguments can be omitted - depend on protocol components. But the relative order (preceedence) of them is still the same.
 
