@@ -189,163 +189,57 @@ struct SignatureChecker
         using FGood = RetType(Params...);
 
         static_assert(std::is_same<FGood, F>::value,
-                      "Signature of a function does not match the context types requirements! ");
+                      "\n\n\tSignature of a function does not match the context types requirements!\n");
         FGood *fGood = f2Check;
     }
 
     template<class PassedAsFunctor>
     SignatureChecker(PassedAsFunctor)
     {
+        // sadly, doesn'n detect errors whithin std::bind-wrapped functions;
+        // just whithin simple functors with operator();
+        // have no idea why...
         using DefinedByContextTypesOperator = RetType(PassedAsFunctor::*)(Params...);
-        // not any idea for the static assert condition here...
+        typedef char One;
+        struct Two { One two[2]; };
+        One test(DefinedByContextTypesOperator);
+        Two test(...);
+        static_assert(sizeof(test(&PassedAsFunctor::operator())) == sizeof(One),
+                      "\n\n\tSingature of a functor does not match the context types requirements!\n");
         DefinedByContextTypesOperator definedByContextTypesOperator = &PassedAsFunctor::operator();
     }
 };
 
-// a number of overloads of 'expandingAdapter(...)' -
-// each one corresponds to the length of it's
-// parameter list, that is a 'Params2FilteredHierarchy'
-// that described earlier;
-// is an intermediate function, used inside of
-// 'filteringAdapter(...)' - see (*)
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,                    // adapting function;
-    ParamsList &paramsList, // filtered hierarchy 'Params2FilteredHierarchy';
-    Int2Type<1>)            // lenght of parameters list (here is for
-                            // 1 parameter);
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>> check(f);
+template<class ParamsList, int idx = ParamsList::lenght, int = ParamsList::lenght>
+struct Hierarchy2Params
+{   // convert a hierarchy of parameters list to a variadic;
+    template<class F, typename... Params>
+    static int call(F f, ParamsList &paramsList, Params &&... params)
+    {
+        return Hierarchy2Params<ParamsList, idx - 1>::
+               call(f,
+                    paramsList,
+                    paramsList.template field<idx>(),
+                    std::forward<Params>(params)...);
+    }
+};
 
-    return f(paramsList.template field<1>());
-}
+template<class ParamsList, int lenght>
+struct Hierarchy2Params<ParamsList, 0, lenght>
+{   // border case - a new variadic is built now, so
+    // call a payload with it;
+    template<class F, typename... Params>
+    static int call(F f, ParamsList &, Params &&... params)
+    {
+        SignatureChecker<int, Params...> check(f);  // helps to reduce an error message
+                                                    // in case of users's error whithin
+                                                    // payload function signature;
+                                                    // doesn't detects std::bind-wrapped
+                                                    // functions errors!!
 
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &,
-    Int2Type<0>)            // oh well sorry, of corse...
-{
-    SignatureChecker<int> check(f);
-    return f();
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<2>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>());
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<3>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>,
-                     typename ParamsList::template FieldType<3>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>(),
-             paramsList.template field<3>());
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<4>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>,
-                     typename ParamsList::template FieldType<3>,
-                     typename ParamsList::template FieldType<4>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>(),
-             paramsList.template field<3>(),
-             paramsList.template field<4>());
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<5>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>,
-                     typename ParamsList::template FieldType<3>,
-                     typename ParamsList::template FieldType<4>,
-                     typename ParamsList::template FieldType<5>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>(),
-             paramsList.template field<3>(),
-             paramsList.template field<4>(),
-             paramsList.template field<5>());
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<6>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>,
-                     typename ParamsList::template FieldType<3>,
-                     typename ParamsList::template FieldType<4>,
-                     typename ParamsList::template FieldType<5>,
-                     typename ParamsList::template FieldType<6>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>(),
-             paramsList.template field<3>(),
-             paramsList.template field<4>(),
-             paramsList.template field<5>(),
-             paramsList.template field<6>());
-}
-
-template<class F, class ParamsList>
-int expandingAdapter(
-    F f,
-    ParamsList &paramsList,
-    Int2Type<7>)
-{
-    SignatureChecker<int,
-                     typename ParamsList::template FieldType<1>,
-                     typename ParamsList::template FieldType<2>,
-                     typename ParamsList::template FieldType<3>,
-                     typename ParamsList::template FieldType<4>,
-                     typename ParamsList::template FieldType<5>,
-                     typename ParamsList::template FieldType<6>,
-                     typename ParamsList::template FieldType<7>> check(f);
-
-    return f(paramsList.template field<1>(),
-             paramsList.template field<2>(),
-             paramsList.template field<3>(),
-             paramsList.template field<4>(),
-             paramsList.template field<5>(),
-             paramsList.template field<6>(),
-             paramsList.template field<7>());
-}
-// ...continue for more number of fields when it
-// will be needed;
+        return f(params...);
+    }
+};
 
 template<class F, typename... Params>
 int filteringAdapter(F f, Params &... params)
@@ -384,7 +278,7 @@ int filteringAdapter(F f, Params &... params)
     // 'Params...' contains the input (dirty) set of types;
     typedef Params2FilteredHierarchy<Params... > ParamsList;
     ParamsList paramsList(params... );  // simply creating a 'filtered hierarchy'...
-    // ...and simply calling the according to hierarchy's length expanding adapter;
-    return expandingAdapter(f, paramsList, Int2Type<ParamsList::lenght>());
+    // ...and simply building a new, filtered, variadic. And then sinply call a payload,
+    return Hierarchy2Params<ParamsList>::call(f, paramsList);
     // ...and nothing more.
 }
