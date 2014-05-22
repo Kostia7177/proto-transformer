@@ -26,8 +26,8 @@ cp -R include/ProtoTransformer/ /usr/local/include/
 
 typedef ProtoTransformer::Proto
     <
-	UsePolicy<RequestDataReprIs, char>,
-	UsePolicy<AnswerDataReprIs, int>
+        UsePolicy<RequestDataReprIs, char>,
+        UsePolicy<AnswerDataReprIs, int>
     > YourOwnProto;
 ```
 
@@ -47,16 +47,16 @@ int payload(const vector<char> &request, vector<int> &answer);
 
 int main(int argc, char **argv)
 {
-	typedef ProtoTransformer::
-		Server<
-	                YourOwnProto,
-	                UsePolicy<SessionManagerIs, SessionManagerWithMap>
+        typedef ProtoTransformer::
+                Server<
+                        YourOwnProto,
+                        UsePolicy<SessionManagerIs, SessionManagerWithMap>
                       > YourOwnServer;
 
-	YourOwnServer(4242, payload);	// server will listen a 4242 port
+        YourOwnServer(4242, payload);	// server will listen a 4242 port
 					// and call a payload on each request
 
-	return 0;
+        return 0;
 }
 ```
 Note that the first template parameter in server definition must be a protocol.
@@ -72,17 +72,17 @@ And **third**. Create a client.
 
 int main(int argc, char **argv)
 {
-	ProtoTransformer::Client<YourOwnProto> client("host.with.your.server.com", 4242);
+        ProtoTransformer::Client<YourOwnProto> client("host.with.your.server.com", 4242);
 
-	while(1)
-	{
-		vector<char> requestBuffer();
-		// fill a request buffer
-		vector<int> answer = client.request(requestBuffer);
-		// do something with an answer;
-	}
+        while(1)
+        {
+                vector<char> requestBuffer();
+                // fill a request buffer
+                vector<int> answer = client.request(requestBuffer);
+                // do something with an answer;
+        }
 
-	return 0;
+        return 0;
 }
 ```
 Much more expressive (but more verbose) examples you can find at the 'examples' directory.
@@ -147,7 +147,7 @@ int payload(const vector<RequestDataRepr> &);
 and if all theese abilities are used, user's code must have the signature
 
 ```cplusplus
-int payload(const SessionHdr &, const RequestHdr &, const vector<RequestReprData> &, SessionSpecific &, AnswerHdr &, vector<AnswerDataRepr> &);
+int payload(const SessionHdr &, const RequestHdr &, const vector<RequestReprData> &, SessionSpecific &, AnswerHdr &, vector<AnswerDataRepr> &, ServerSpace *);
 ```
 With the exception of requestData, all other arguments can be omitted - depend on protocol components. But the relative order (preceedence) of them is still the same.
 
