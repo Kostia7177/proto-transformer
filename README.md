@@ -128,6 +128,18 @@ Answer data (the same as request data) can be preceeded by header.
 + AnswerHdr &answerHdr **<--** where to put answer header
 + vector<AnswerDataRepr> &answerData
 
+If any objects of a server address space are desired to be available for all requests of all sessions, it is recommended to aggregate them to any structure and to pass to a payload code as one object.
+
+1. const SessionHdr &sessionHeader
+1. const RequestHdr &requestHdr
+1. const vector<RequestDataRepr> requestData
+1. SessionSpecific &sessionSpecific
+1. AnswerHdr &answerHdr
+1. vector<AnswerDataRepr> &answerData
+1. address of a "server space buffer" **<--**
+
+Remember the preceedence order of theese items.
+
 So, if payload code takes only a request (and no any headers) , not uses session-specific data and not provides any answer, it's sgnature will
 ```cplusplus
 int payload(const vector<RequestDataRepr> &);
@@ -155,9 +167,10 @@ Angle bracets are containing a default pre-set value.
 - RequestDataReprIs\<unsigned char>	- value type of a request vector;
 
 ####Answer description
-- ServerSendsAnswer\<AtLeastHeader>	- by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
-** NoAnswerAtAll	- alternately, there is case when no answer supposed at all - requests-only protocol;
-** NothingIfNoData	- and a case sends nothing if no answer data - even header;
+- ServerSendsAnswer\<AtLeastHeader> - does server replies anything, and how much, if so;
+1. AtLeastHeader	- by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
+1. NoAnswerAtAll	- alternately, there is case when no answer supposed at all - requests-only protocol;
+1. NothingIfNoData	- and a case sends nothing if no answer data - even header;
 - SetSizeOfAnswer2HdrIs\<Host2NetworkLong>
 - GetSizeOfAnswerFromHdrIs\<Network2HostLong>
 - AnswerCompletionIs\<NullType>
