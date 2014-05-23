@@ -13,73 +13,67 @@
 
 // the following is a 'working body' for the
 // 'Params2FilteredHierarchyCore' see (**)
-template<typename T>
-struct BinderBase
+template<int idx>
+struct BinderPos
 {
-    typedef T Type;
-    // 'Get' is accessible at the last
-    // field of hierarchy - see (***). within all
-    // other cases it is hiden by same name
-    // whithin derived;
-    template<int> struct Get { typedef T Type; };
-};
-template<int idx, typename T, int uniquizer>
-struct Binder : BinderBase<T &>
-{   // common case; puts a reference to 'T' as
-    // a payload field;
-    //
     // (****) 'length' plays a double role. it
     // calculates an index that will be passed
     // to the next field, and - at the last field
     // of hierarhy - equals an 'actual length' of
     // it (number of meaningfull fields it contains)
-    enum { lenght = idx + 1, pos = lenght };
+    enum { length = idx, pos = length };
+};
+template<typename T>
+struct BinderData
+{
+    typedef T Type;
+    T value;
 
-    T &value;
-    Binder(T &arg) : value(arg) {}
-    // (*****) 'get' is accessible at the last field
-    // of hierarchy - see (***). within all other
-    // cases it is hiden by the same name whithin
-    // derived;
-    template<int> T &get() { return value; }
+    BinderData(T arg) : value(arg) {}
+
+    // 'Get' and 'get' are accessible at the last
+    // field of hierarchy - see (***). within all
+    // other cases it is hiden by same name
+    // whithin derived;
+    template<int> struct Get { typedef T Type; };
+    template<int> T get() { return value; }
+};
+template<int idx, typename T, int uniquizer>
+struct Binder
+    : BinderData<T &>,
+      BinderPos<idx + 1>
+{   // common case; puts a reference to 'T' as
+    // a payload field;
+    Binder(T &arg) : BinderData<T &>(arg) {}
 };
 
 template<int idx, typename Pointee, int uniquizer>
 struct Binder<idx, Pointee *, uniquizer>
-    : BinderBase<Pointee *>
+    : BinderData<Pointee *>,
+      BinderPos<idx + 1>
 {   // pointers must be represented as is,
     // not as referenses;
-    //
-    // see (****);
-    enum { lenght = idx + 1, pos = lenght };
-
-    Pointee *value;
-    Binder(Pointee *arg) : value(arg) {}
-    // see (*****);
-    template<int> Pointee *get() { return value; }
+    Binder(Pointee *arg) : BinderData<Pointee *>(arg) {}
 };
 
 template<int idx, int uniquizer>
 struct Binder<idx, NullType, uniquizer>
-    : BinderBase<NullType>
+    : BinderPos<idx>
 {   // hiding the meanless 'NullType'
-    enum { lenght = idx, pos = lenght };
     Binder(NullType) {}
 };
 
 template<int idx, int uniquizer>
 struct Binder<idx, const NullType, uniquizer>
-    : BinderBase<const NullType &>
+    : BinderPos<idx>
 {
-    enum { lenght = idx, pos = lenght };
     Binder(NullType) {}
 };
 
 template<int idx, int uniquizer>
 struct Binder<idx, NullType *, uniquizer>
-    : BinderBase<NullType *>
+    : BinderPos<idx>
 {
-    enum { lenght = idx, pos = lenght };
     Binder(NullType *) {}
 };
 
@@ -109,7 +103,7 @@ class Params2FilteredHierarchyCore<idx, uniquizer, Head, Tail...>
 {   // main working case
     typedef Binder<idx, Head, uniquizer> BinderLocal;   // will be a current field;
 
-    enum { nextPos = BinderLocal::lenght };
+    enum { nextPos = BinderLocal::length };
     typedef typename Params2FilteredHierarchyCore<nextPos, uniquizer + 1, Tail...>::Type FollowingFields;
                                                                         //   ^^^^^^^^^^^^^^^^^^^^^^^^^^ :)
     public:                                                             //   |
@@ -141,22 +135,14 @@ class Params2FilteredHierarchyCore<idx, uniquizer, Head, Tail...>
         // actually sees at the last field of hierarchy (border case), where
         // nested Type is Binder (in other words, where Binder::length is not
         // redefined by (derived class Type)::length);
-        enum { lenght = FollowingFields::lenght };
+        enum { length = FollowingFields::length };
 
         Type(Head &head, Tail &... tail) : BinderLocal(head), FollowingFields(tail...) {}
 
         template<int pos>
         typename Get<pos>::Type get()
         {
-            typedef Int2Type<pos == BinderLocal::pos
-                             && std::is_same<typename BinderLocal::Type,
-                                             NullType>::value == false
-                             && std::is_same<typename BinderLocal::Type,
-                                             const NullType>::value == false
-                             && std::is_same<typename BinderLocal::Type,
-                                             size_t>::value == false> Switcher;
-            Switcher switcher;
-            return getSw<pos>(switcher); 
+            return getSw<pos>(Int2Type<pos == BinderLocal::pos>()); 
         }
 
         private:
@@ -174,10 +160,9 @@ class Params2FilteredHierarchy
 
     public:
     Params2FilteredHierarchy(Params &... params) : core(params...) {}
-    enum { lenght = Core::lenght };
-    template<int pos> using FieldType = typename Core::template Get<pos>::Type;
+    enum { length = Core::length };
     // accessing the hierarchy's field number 'pos' (starts with 1)
-    template<int pos> FieldType<pos> field(){ return core.template get<pos>(); }
+    template<int pos> typename Core::template Get<pos>::Type field(){ return core.template get<pos>(); }
 };
 
 template<class RetType, class... Params>
@@ -189,7 +174,8 @@ struct SignatureChecker
         using FGood = RetType(Params...);
 
         static_assert(std::is_same<FGood, F>::value,
-                      "\n\n\tSignature of a function does not match the context types requirements!\n");
+                      "\n\n\tSignature of a function does not match the context types requirements! "
+                      "\n\tFor details see the following error message. \n");
         FGood *fGood = f2Check;
     }
 
@@ -205,12 +191,13 @@ struct SignatureChecker
         One test(DefinedByContextTypesOperator);
         Two test(...);
         static_assert(sizeof(test(&PassedAsFunctor::operator())) == sizeof(One),
-                      "\n\n\tSingature of a functor does not match the context types requirements!\n");
+                      "\n\n\tSingature of a functor does not match the context types requirements! "
+                      "\n\tFor details see the following error message. \n");
         DefinedByContextTypesOperator definedByContextTypesOperator = &PassedAsFunctor::operator();
     }
 };
 
-template<class ParamsList, int idx = ParamsList::lenght, int = ParamsList::lenght>
+template<class ParamsList, int idx = ParamsList::length>
 struct Hierarchy2Params
 {   // convert a hierarchy of parameters list to a variadic;
     template<class F, typename... Params>
@@ -224,8 +211,8 @@ struct Hierarchy2Params
     }
 };
 
-template<class ParamsList, int lenght>
-struct Hierarchy2Params<ParamsList, 0, lenght>
+template<class ParamsList>
+struct Hierarchy2Params<ParamsList, 0>
 {   // border case - a new variadic is built now, so
     // call a payload with it;
     template<class F, typename... Params>
@@ -278,7 +265,7 @@ int filteringAdapter(F f, Params &... params)
     // 'Params...' contains the input (dirty) set of types;
     typedef Params2FilteredHierarchy<Params... > ParamsList;
     ParamsList paramsList(params... );  // simply creating a 'filtered hierarchy'...
-    // ...and simply building a new, filtered, variadic. And then sinply call a payload,
+    // ...and simply building a new, filtered, variadic. And then simply call a payload,
     return Hierarchy2Params<ParamsList>::call(f, paramsList);
     // ...and nothing more.
 }
