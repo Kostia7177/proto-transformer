@@ -53,8 +53,8 @@ int main(int argc, char **argv)
                         UsePolicy<SessionManagerIs, SessionManagerWithMap>
                       > YourOwnServer;
 
-        YourOwnServer(4242, payload);	// server will listen a 4242 port
-					// and call a payload on each request
+        YourOwnServer(4242, payload);   // server will listen a 4242 port
+                                        // and call a payload on each request
 
         return 0;
 }
@@ -165,7 +165,7 @@ Angle bracets are containing a default pre-set value.
 - SessionHdrIs\<NullType>	- any session invariant; passed to a server after connection will be established at the very beginning of the session;
 
 ####Request description
-- RequestHdrIs\<JustSize>		- traits-structure with typedef of a request header itself, and two atatic functions that are get and set size from/to header itself see JustSize.hpp file for example; by default header itself is uint32_t and is to be calculated, automatically as a size of request data buffer get/set functions are wrapped ntohl and htonl;
+- RequestHdrIs\<JustSize>		- traits-structure with typedef of a request header itself, and two static functions that are get and set size from/to header itself, see JustSize.hpp file for example; by default header itself is uint32_t and is to be calculated automatically as a size of request data buffer get/set functions are wrapped ntohl and htonl;
 - RequestCompletionIs\<NullType>	- user can specify a request-completion function instead of request header;
 					  note that the request header must be turned to NullType in this case explicitly;
 - RequestDataReprIs\<unsigned char>	- value type of a request vector;
