@@ -159,9 +159,9 @@ class Session
     public:
 
     Session(Cfg cfg, SocketPtr socketPtrArg, ServerSpace *serverSpaceArg)
-        : ioSocketPtr(socketPtrArg),
-          serverSpace(serverSpaceArg),
-          administration(taskBuffers.inDataBuffer){}
+        : serverSpace(serverSpaceArg),
+          administration(taskBuffers.inDataBuffer),
+	  ioSocketPtr(socketPtrArg){}
     ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }
 
     template<class F> void run(F);
