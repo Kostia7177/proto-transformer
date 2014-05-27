@@ -12,7 +12,7 @@ LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_thread -lpthread -lboost_progr
 
 all: $(All)
 
-CFLAGS += -g -std=c++11 -Iinclude
+CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 
 .cpp.o:
 	$(ProvideObj)
