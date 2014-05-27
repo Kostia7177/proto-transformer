@@ -57,10 +57,16 @@ void Server<Proto, Params...>::startAccepting(
                           {
                               if (!errorCode)
                               {
-                                  sessionManagerPtr->startSession(std::make_shared<Session<Cfg>>(cfg, newSocketPtr, serverSpace), payload);
+                                  std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg, newSocketPtr, serverSpace);
+                                  sessionManagerPtr->startSession(newSession, payload);
+                                  logger.itself(logger.itself.debug(), "New session %zx started; ", newSession.get());
                                   startAccepting(cfg, payload, sessionManagerPtr);
                               }
-                              else { stop(); }
+                              else
+                              {
+                                logger.itself(logger.itself.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
+                                stop();
+                              }
                           });
 }
 

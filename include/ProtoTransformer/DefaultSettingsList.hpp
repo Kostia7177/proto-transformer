@@ -7,6 +7,8 @@
 #include "detail/SessionManagers/Empty.hpp"
 #include "detail/JustSize.hpp"
 #include "detail/ReadingManager.hpp"
+#include "detail/Loggers/Syslog.hpp"
+#include "detail/Loggers/Stderr.hpp"
 #include <threadpool.hpp>
 
 namespace ProtoTransformer

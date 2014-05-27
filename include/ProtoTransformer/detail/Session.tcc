@@ -23,7 +23,13 @@ void Session<Cfg>::runSw(
                [=] (const boost::system::error_code &errorCode,
                     size_t numOfBytes)
                {
-                    if (errorCode || administration.exitManager.sessionWasRemoved()) { return; }
+                    if (administration.exitManager.sessionWasRemoved()) { return; }
+                    if (errorCode)
+                    {
+                        logger(logger.errorOccured(),
+                               "Cannot read session header: '%s'; ", errorCode.message().c_str());
+                        return;
+                    }
                     initSessionSpecificSw(initSessionSpecific);
                     readRequestSw(requestCompletion, payload, exitDetector);
                });
@@ -69,7 +75,12 @@ void Session<Cfg>::readRequestSw(
                [=] (const boost::system::error_code &errorCode,
                     size_t numOfBytes)
                {
-                    if (errorCode || administration.exitManager.sessionWasRemoved()) { return; }
+                    if (administration.exitManager.sessionWasRemoved()) { return; }
+                    if (errorCode)
+                    {
+                        logger(logger.errorOccured(), "Cannot read request header '%s'; ", errorCode.message().c_str());
+                        return;
+                    }
 
                     // ...and then get a request size from the header...
                     taskBuffers.inDataBuffer.resize(Cfg::RequestHdr::getSize(taskBuffers.requestHdr) / sizeof(typename Cfg::RequestDataRepr));
@@ -79,7 +90,12 @@ void Session<Cfg>::readRequestSw(
                                [=] (const boost::system::error_code &errorCode,
                                     size_t numOfBytesRecivied)
                                {
-                                    if (errorCode || administration.exitManager.sessionWasRemoved()) { return; }
+                                    if (administration.exitManager.sessionWasRemoved()) { return; }
+                                    if (errorCode)
+                                    {
+                                        logger(logger.errorOccured(), "Cannot read request data '%s'; ", errorCode.message().c_str());
+                                        return;
+                                    }
                                     processRequest(payload, exitDetector);
                                });
                });
@@ -135,9 +151,16 @@ void Session<Cfg>::processRequest(
                                                                            serverSpace);
 
                                             }
+                                            catch(const std::exception &exc)
+                                            {
+                                                logger(logger.payloadCrached(),
+                                                       "Payload function have thrown an exception %s; ",
+                                                       exc.what());
+                                            }
                                             catch (...)
                                             {
-                                                administration.logger("");
+                                                logger(logger.payloadCrached(),
+                                                       "Payload function have thrown an unrecognized exception; ");
                                             }
 
                                             if (!retCode) { (*ioSocketPtr).shutdown(Socket::shutdown_receive); }
@@ -172,7 +195,12 @@ void Session<Cfg>::writeAnswerSw(
                 [=] (const boost::system::error_code &errorCode,
                      size_t)
                 {
-                    if(errorCode || administration.exitManager.sessionWasRemoved()) { return; }
+                    if (administration.exitManager.sessionWasRemoved()) { return; }
+                    if (errorCode)
+                    {
+                        logger(logger.errorOccured(), "Cannot write answer header '%s'; ", errorCode.message().c_str());
+                        return;
+                    }
                     writeAnswerData(payload, exitDetector);
                 });
 }
@@ -217,7 +245,12 @@ void Session<Cfg>::writeAnswerData(
                 [=] (const boost::system::error_code &errorCode,
                      size_t numOfBytesSent)
                 {
-                    if (errorCode || administration.exitManager.sessionWasRemoved()) { return; }
+                    if (administration.exitManager.sessionWasRemoved()) { return; }
+                    if (errorCode)
+                    {
+                        logger(logger.errorOccured(), "Cannot write answer data '%s'; ", errorCode.message().c_str());
+                        return;
+                    }
                     readRequestSw(requestCompletion, payload, exitDetector);
                 });
 }

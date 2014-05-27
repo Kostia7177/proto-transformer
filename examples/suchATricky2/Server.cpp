@@ -30,7 +30,8 @@ int main(
     typedef Server
         <
             ProtoWithAnyHdr,
-            UsePolicy<SessionManagerIs, SessionManagerWithMap>
+            UsePolicy<SessionManagerIs, SessionManagerWithMap>,
+            UsePolicy<LoggerIs, SyslogLogger>
         > ServerInstance;
     ServerInstance server(port, doSomething);
 

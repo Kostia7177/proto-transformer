@@ -73,6 +73,7 @@ class Server
     boost::asio::io_service ioService;
     boost::asio::ip::tcp::acceptor acceptor;
     typename Cfg::ServerThreadPool workingThreads;
+    typename Cfg::Logger logger;
     typedef typename Cfg::ServerSpace ServerSpace;
     ServerSpace *serverSpace;
 

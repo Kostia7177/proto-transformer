@@ -27,7 +27,9 @@ int main(
 
     Server<ProtoWithoutAnswer,
            UsePolicy<SessionThreadPoolIs, boost::threadpool::pool>,
-           UsePolicy<ParallelRequestsPerSessionIs, Int2Type<42>>>(port, doSomething);
+           UsePolicy<ParallelRequestsPerSessionIs, Int2Type<42>>,
+           UsePolicy<LoggerIs, StderrLogger>
+          >(port, doSomething);
     return 0;
 }
 

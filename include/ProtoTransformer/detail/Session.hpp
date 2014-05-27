@@ -71,8 +71,6 @@ struct SessionAdministration
     ExitManager exitManager;
     typename Cfg::TaskManager taskManager;
 
-    typename Cfg::Logger logger;
-
     template<class B>
     SessionAdministration(B &buffer)
         : readingManager(buffer),
@@ -109,6 +107,8 @@ class Session
     typedef SessionAdministration<Cfg, Session<Cfg>> Administration;
     Administration administration;
     typename Administration::RequestCompletion requestCompletion;
+
+    typename Cfg::Logger::Itself logger;
 
     SocketPtr ioSocketPtr;
 
@@ -162,7 +162,7 @@ class Session
         : ioSocketPtr(socketPtrArg),
           serverSpace(serverSpaceArg),
           administration(taskBuffers.inDataBuffer){}
-    ~Session(){}
+    ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }
 
     template<class F> void run(F);
 

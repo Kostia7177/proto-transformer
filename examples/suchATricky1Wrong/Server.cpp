@@ -38,7 +38,7 @@ int main(
     Durations durations;
     std::mutex locker;
     ServerInstance(port, boost::bind(&doSomething,
-                                     std::ref(durations) ,
+                                     std::ref(durations), 
                                      std::ref(locker),
                                      _1, _2, _3, _4, _5));
 
