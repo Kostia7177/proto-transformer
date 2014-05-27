@@ -65,8 +65,8 @@ class Server
     {   // merging Proto with other parameters
     };
     static_assert(std::is_same<typename Cfg::SessionThreadPool, NullType>::value
-                  || !std::is_same<typename Cfg::SessionThreadPool, NullType>::value
-                     && Cfg::serverSendsAnswer == never,
+                  || (!std::is_same<typename Cfg::SessionThreadPool, NullType>::value
+                      && Cfg::serverSendsAnswer == never),
                   "Parallel requests processing within a session is available with "
                   "no-answer proto only! ");
 
