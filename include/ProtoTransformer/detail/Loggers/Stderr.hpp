@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <vector>
 #include <string>
+#include <sstream>
 
 class StderrLogger
 {
@@ -12,8 +13,11 @@ class StderrLogger
 
     public:
 
-    StderrLogger()
+    StderrLogger() : tags(numOf)
     {
+        tags[errorPri]      = "ERR";
+        tags[warningPri]    = "WARN";
+        tags[debugPri]      = "DBG";
     }
 
     int payloadCrached()    { return warningPri; }
@@ -25,9 +29,17 @@ class StderrLogger
         const char *fmt,
         ...)
     {
+        std::stringstream newFmt;
+        newFmt << tags[priority]
+               << ": At " << time(0)
+               <<"; pid: " << getpid()
+               <<"; thread: " << pthread_self()
+               << "; " << fmt << "\n";
+        std::string fmtStr(newFmt.str());
+
         va_list params;
-        va_start(params, fmt);
-        vfprintf(stderr, fmt, params);
+        va_start(params, fmtStr.c_str());
+        vfprintf(stderr, fmtStr.c_str(), params);
         va_end(params);
     }
 };
