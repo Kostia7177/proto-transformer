@@ -98,10 +98,10 @@ There can be any header preceeding the request. If the header contains only a si
 + const RequestHdr &requestHdr **<--**
 + const vector<RequestDataRepr> requestData
 
-Request header is actually a wrapper around header's type itself (typedefed as Itself) and two static functions, which are to get and set value of size into the request itself. Functions must have the next interfaces
+Request header is actually a wrapper around header's type itself (typedefed as **Itself** ) and two static functions, which are to get and set value of size into the request itself (excuse me this extra itselfing) . Functions must have names **getSize** and **setSize2** the following interfaces
 ```cplusplus
 static uint32_t getSize(Itself)
-static void setSize(uint32_t, Itself &);
+static void setSize2(uint32_t, Itself &);
 ```
 
 Now, if a session header is not 'NullType', we must pass it too.
