@@ -93,10 +93,16 @@ First, of corse, the request body itself. So,
 
 + const vector<RequestDataRepr> &requestData
 
-There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . But if the 'GetSizeOfRequestFromHdr' functor is not the same as 'Network2HostLong' (which is simply wrapping for ntohl()) , we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
+There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . If the request header is exactly of 'JustSize' type (see JustSize.hpp file) we assert that nothing but size there inside the request header. Otherwise we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
 
 + const RequestHdr &requestHdr **<--**
 + const vector<RequestDataRepr> requestData
+
+Request header is actually a wrapper around header's type itself (typedefed as Itself) and two static functions, which are to get and set value of size into the request itself. Functions must have the next interfaces
+```cplusplus
+static uint32_t getSize(Itself)
+static void setSize(uint32_t, Itself &);
+```
 
 Now, if a session header is not 'NullType', we must pass it too.
 
@@ -209,3 +215,7 @@ Angle bracets are containing a default pre-set value.
 						  when no request size is known (not a
 						  completion function! just what it calls!
 						  see ReadingManager.hpp file);
+- LoggerIs\<NullType> - where the error/warning/debug messages will be written;
+1. NullType - nowhere all theese messages will be written;
+2. SyslogLogger - messages will be directed to syslog (see Loggers/Syslog.hpp file);
+3. StderrLogger - messages will be directed to stderr (see Loggers/Stderr.hpp file)
