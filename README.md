@@ -181,9 +181,9 @@ Angle bracets are containing a default pre-set value.
 ####Answer description
 - ServerSendsAnswer\<AtLeastHeader> - does server replies anything, and how much, if so;
 
-1. AtLeastHeader	- by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
-1. NoAnswerAtAll	- alternately, there is case when no answer supposed at all - requests-only protocol;
-1. NothingIfNoData	- and a case sends nothing if no answer data - even header;
+1. AtLeastHeader - by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
+1. NoAnswerAtAll - alternately, there is case when no answer supposed at all - requests-only protocol;
+1. NothingIfNoData - and a case sends nothing if no answer data - even header;
 
 - Answer2HdrIs\<JustSize>
 - AnswerCompletionIs\<NullType>
