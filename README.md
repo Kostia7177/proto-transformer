@@ -218,6 +218,7 @@ Angle bracets are containing a default pre-set value.
 						  completion function! just what it calls!
 						  see ReadingManager.hpp file);
 - LoggerIs\<NullType> - where the error/warning/debug messages will be written;
+
 1. NullType - nowhere all theese messages will be written;
 2. SyslogLogger - messages will be directed to syslog (see Loggers/Syslog.hpp file);
 3. StderrLogger - messages will be directed to stderr (see Loggers/Stderr.hpp file)
