@@ -100,7 +100,7 @@ There can be any header preceeding the request. If the header contains only a si
 
 Request header is actually a wrapper around header's type itself (typedefed as **Itself** ) and two static functions, which are to get and set value of size into the request itself (excuse me this extra itselfing) . Functions must have names **getSize** and **setSize2** and the following interfaces
 ```cplusplus
-static uint32_t getSize(Itself)
+static uint32_t getSize(Itself); // or const reference to Itself;
 static void setSize2(uint32_t, Itself &);
 ```
 There are examples of request (and answer) header wrappers you can see - at suchATricy1 and suchATricky2 (see ExampleFeatures.hpp files) .
