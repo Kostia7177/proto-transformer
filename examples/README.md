@@ -1,0 +1,1 @@
+To add a new example create a new directory with Proto.hpp, Server.cpp and Client.cpp files. The things that are to be either at the server side or at the client side place to ExampleFeatures.hpp and ExampleFeatures.cpp files.
