@@ -93,10 +93,18 @@ First, of corse, the request body itself. So,
 
 + const vector<RequestDataRepr> &requestData
 
-There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . But if the 'GetSizeOfRequestFromHdr' functor is not the same as 'Network2HostLong' (which is simply wrapping for ntohl()) , we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
+There can be any header preceeding the request. If the header contains only a size of the request, no need to pass it to a user's code - size of the request is available as request.size() . If the request header is exactly of 'JustSize' type (see JustSize.hpp file) we assert that nothing but size there inside the request header. Otherwise we suppose that the request header contains something more than simply size. What could be there - time of request forming, sequence number of it, it's id or something else. So, in this case we have to pass it to the payload:
 
 + const RequestHdr &requestHdr **<--**
 + const vector<RequestDataRepr> requestData
+
+Request header is actually a wrapper around header's type itself (typedefed as **Itself** ) and two static functions, which are to get and set value of size into the request itself (excuse me this extra itselfing) . Functions must have names **getSize** and **setSize2** and the following interfaces
+```cplusplus
+static uint32_t getSize(Itself); // or const reference to Itself;
+static void setSize2(uint32_t, Itself &);
+```
+There are examples of request (and answer) header wrappers you can see - at suchATricy1 and suchATricky2 (see ExampleFeatures.hpp files) .
+And at JustSize.hpp, of corse - the simplest case.
 
 Now, if a session header is not 'NullType', we must pass it too.
 
@@ -162,50 +170,35 @@ With the exception of requestData, all other arguments can be omitted - depend o
 Angle bracets are containing a default pre-set value.
 
 ####Whole session description
-- SessionHdrIs\<NullType>	- any session invariant; passed to a server after connection will be established at the very beginning of the session;
+- *SessionHdrIs\<NullType>*	- any session invariant; passed to a server after connection will be established at the very beginning of the session;
 
 ####Request description
-- RequestHdrIs\<JustSize>		- traits-structure with typedef of a request header itself, and two static functions that are get and set size from/to header itself, see JustSize.hpp file for example; by default header itself is uint32_t and is to be calculated automatically as a size of request data buffer get/set functions are wrapped ntohl and htonl;
-- RequestCompletionIs\<NullType>	- user can specify a request-completion function instead of request header;
-					  note that the request header must be turned to NullType in this case explicitly;
-- RequestDataReprIs\<unsigned char>	- value type of a request vector;
+- *RequestHdrIs\<JustSize>* - traits-structure with typedef of a request header itself, and two static functions that are get and set size from/to header itself, see JustSize.hpp file for example; by default header itself is uint32_t and is to be calculated automatically as a size of request data buffer get/set functions are wrapped ntohl and htonl;
+- *RequestCompletionIs\<NullType>* - user can specify a request-completion function instead of request header; note that the request header must be turned to NullType in this case explicitly;
+- *RequestDataReprIs\<unsigned char>* - value type of a request vector;
 
 ####Answer description
-- ServerSendsAnswer\<AtLeastHeader> - does server replies anything, and how much, if so;
-
-1. AtLeastHeader	- by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
-1. NoAnswerAtAll	- alternately, there is case when no answer supposed at all - requests-only protocol;
-1. NothingIfNoData	- and a case sends nothing if no answer data - even header;
-
-- Answer2HdrIs\<JustSize>
-- AnswerCompletionIs\<NullType>
-- AnswerDataReprIs\<unsigned char>
+- *ServerSendsAnswer\<AtLeastHeader>* - does server replies anything, and how much, if so;
+ - AtLeastHeader - by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
+ - NoAnswerAtAll - alternately, there is case when no answer supposed at all - requests-only protocol;
+ - NothingIfNoData - and a case sends nothing if no answer data - even header;
+- *AnswerHdrIs\<JustSize>* - the same as for RequestHdrIs, but just for answer;
+- *AnswerCompletionIs\<NullType>* - the same as for RequestCompletionIs, but just for answer;
+- *AnswerDataReprIs\<unsigned char>* - the same as for RequestDataReprIs, but just for answer;
 
 ###Appendix B. Non-protocol components.
 
-- NumOfWorkersIs\<Int2Type\<hardwareConcurrency>>	- number of parallel sessions;
-- ParallelRequestsPerSessionIs\<Int2Type\<1>>	- has a meaning if SessionThreadPoolIs
-						  points to something multi-threaded
-						  (boost::threadpool, for example)
-						  note, that 0 means thread concurrency!
-- SessionSpecificIs\<NullType>			- such a session-static variable(s); some
-						  data that is available for all requests
-						  within a session (and is not available
-						  for all the other sessions requests);
-- InitSessionSpecificIs\<NullType>		- function that initializes session
-						  specific (may be by session-header
-						  data or it's part);
-- SessionManagerIs\<EmptyManager>		- empty (by default); starts the session
-						  and forget about it - session will be
-						  dropped when it'll be finished independently
-						  of a server; see SessionManagers/Empty.hpp;
-						  alternatively there could be used a manager
-						  with map that remembers all the sessions and
-						  terminates them on server's exit; see
-						  SessionManagers/WithMap.hpp;
-- ServerThreadPoolIs\<boost::threadpool::pool>
-- SessionThreadPoolIs\<NullType>
-- ReadingManagerIs\<ReadingManager>		- that thing, that manages the reading
-						  when no request size is known (not a
-						  completion function! just what it calls!
-						  see ReadingManager.hpp file);
+- *NumOfWorkersIs\<Int2Type\<hardwareConcurrency>>* - number of parallel sessions;
+- *ParallelRequestsPerSessionIs\<Int2Type\<1>>* - has a meaning if SessionThreadPoolIs points to something multi-threaded (boost::threadpool, for example)  note, that **0 means thread concurrency** !
+- *SessionSpecificIs\<NullType>* - such a session-static variable(s); some data that is available for all requests within a session (and is not available for all the other sessions requests);
+- *InitSessionSpecificIs\<NullType>* - function that initializes session specific (may be by session-header data or it's part);
+- *SessionManagerIs\<EmptyManager>* - the responsibli for the session lifetime module;
+ - EmptyManager - starts the session and forget about it - session will be dropped when it'll be finished independently of a server; see SessionManagers/Empty.hpp;
+ - WithMap - remembers all the sessions within a map and terminates them on server's exit; see SessionManagers/WithMap.hpp;
+- *ServerThreadPoolIs\<boost::threadpool::pool>*
+- *SessionThreadPoolIs\<NullType>*
+- *ReadingManagerIs\<ReadingManager>* - that thing, that manages the reading when no request size is known (not a completion function! just what it calls! see ReadingManager.hpp file);
+- *LoggerIs\<NullType>* - where the error/warning/debug messages will be written;
+ - NullType - nowhere all theese messages will be written;
+ - SyslogLogger - messages will be directed to syslog (see Loggers/Syslog.hpp file);
+ - StderrLogger - messages will be directed to stderr (see Loggers/Stderr.hpp file)
