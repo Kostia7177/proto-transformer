@@ -179,11 +179,9 @@ Angle bracets are containing a default pre-set value.
 
 ####Answer description
 - *ServerSendsAnswer\<AtLeastHeader>* - does server replies anything, and how much, if so;
-
-1. AtLeastHeader - by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
-1. NoAnswerAtAll - alternately, there is case when no answer supposed at all - requests-only protocol;
-1. NothingIfNoData - and a case sends nothing if no answer data - even header;
-
+ - AtLeastHeader - by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
+ - NoAnswerAtAll - alternately, there is case when no answer supposed at all - requests-only protocol;
+ - NothingIfNoData - and a case sends nothing if no answer data - even header;
 - *Answer2HdrIs\<JustSize>*
 - *AnswerCompletionIs\<NullType>*
 - *AnswerDataReprIs\<unsigned char>*
@@ -199,7 +197,6 @@ Angle bracets are containing a default pre-set value.
 - *SessionThreadPoolIs\<NullType>*
 - *ReadingManagerIs\<ReadingManager>* - that thing, that manages the reading when no request size is known (not a completion function! just what it calls! see ReadingManager.hpp file);
 - *LoggerIs\<NullType>* - where the error/warning/debug messages will be written;
-
-1. NullType - nowhere all theese messages will be written;
-2. SyslogLogger - messages will be directed to syslog (see Loggers/Syslog.hpp file);
-3. StderrLogger - messages will be directed to stderr (see Loggers/Stderr.hpp file)
+ - NullType - nowhere all theese messages will be written;
+ - SyslogLogger - messages will be directed to syslog (see Loggers/Syslog.hpp file);
+ - StderrLogger - messages will be directed to stderr (see Loggers/Stderr.hpp file)
