@@ -182,9 +182,9 @@ Angle bracets are containing a default pre-set value.
  - AtLeastHeader - by default - if the answer contains no data, just a header will be returned to a client (signalling that no data will follow);
  - NoAnswerAtAll - alternately, there is case when no answer supposed at all - requests-only protocol;
  - NothingIfNoData - and a case sends nothing if no answer data - even header;
-- *Answer2HdrIs\<JustSize>*
-- *AnswerCompletionIs\<NullType>*
-- *AnswerDataReprIs\<unsigned char>*
+- *AnswerHdrIs\<JustSize>* - the same as for RequestHdrIs, but just for answer;
+- *AnswerCompletionIs\<NullType>* - the same as for RequestCompletionIs, but just for answer;
+- *AnswerDataReprIs\<unsigned char>* - the same as for RequestDataReprIs, but just for answer;
 
 ###Appendix B. Non-protocol components.
 
@@ -192,7 +192,9 @@ Angle bracets are containing a default pre-set value.
 - *ParallelRequestsPerSessionIs\<Int2Type\<1>>* - has a meaning if SessionThreadPoolIs points to something multi-threaded (boost::threadpool, for example)  note, that **0 means thread concurrency** !
 - *SessionSpecificIs\<NullType>* - such a session-static variable(s); some data that is available for all requests within a session (and is not available for all the other sessions requests);
 - *InitSessionSpecificIs\<NullType>* - function that initializes session specific (may be by session-header data or it's part);
-- *SessionManagerIs\<EmptyManager>* - empty (by default); starts the session and forget about it - session will be dropped when it'll be finished independently of a server; see SessionManagers/Empty.hpp;  **alternatively** there could be used a manager with map that remembers all the sessions and terminates them on server's exit; see SessionManagers/WithMap.hpp;
+- *SessionManagerIs\<EmptyManager>* - the responsibli for the session lifetime module;
+ - EmptyManager - starts the session and forget about it - session will be dropped when it'll be finished independently of a server; see SessionManagers/Empty.hpp;
+ - WithMap - remembers all the sessions within a map and terminates them on server's exit; see SessionManagers/WithMap.hpp;
 - *ServerThreadPoolIs\<boost::threadpool::pool>*
 - *SessionThreadPoolIs\<NullType>*
 - *ReadingManagerIs\<ReadingManager>* - that thing, that manages the reading when no request size is known (not a completion function! just what it calls! see ReadingManager.hpp file);
