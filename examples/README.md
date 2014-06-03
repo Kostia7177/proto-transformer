@@ -2,3 +2,5 @@ To add a new example create a new directory with Proto.hpp, Server.cpp and Clien
 No need to add anything to a ../Makefile - the new example will be found automaticaly.
 ##simplest##
 Uses default protocol settings. 
+##strings##
+Sends null-terminated sequences of char, and so awaiting as an answer.
