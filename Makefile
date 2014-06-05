@@ -2,6 +2,8 @@
 
 .SECONDARY:
 
+DESTDIR			?= /usr/local/include/
+
 Examples		= $(shell for D in `find examples/ -mindepth 1 -type d -print`; do echo "$$D/$1"; done)
 GetExampleFeatures	= $(shell if test -f $1/ExampleFeatures.cpp; then echo "$1/ExampleFeatures.$2"; fi)
 All			= $(call Examples,Server) $(call Examples,Client)
@@ -11,6 +13,8 @@ ProvideObj		= g++ $(CFLAGS) -o $@ -c $<
 LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_thread -lpthread -lboost_program_options
 
 all: $(All)
+install:
+	cp -R include/* $(DESTDIR)
 
 CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 
