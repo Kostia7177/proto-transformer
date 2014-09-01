@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Tools.hpp"
-#include <boost/asio.hpp>
+#include "GccBug47226Satellite.hpp"
 
 namespace ProtoTransformer
 {
@@ -25,24 +25,48 @@ struct ReadingManager
         DataBuffer &dataBufferRef;
         DataBuffer dataRest;
 
-        template<typename AdditionalCtl>
-        size_t readingCompletedSw(const AdditionalCtl &additionalCtl)   { return readingCompleted(dataBufferRef, offset, accumulated, additionalCtl); }
-        size_t readingCompletedSw(NullType)                             { return readingCompleted(dataBufferRef, offset, accumulated); }
-
         void beforeRecv();
         void afterReading(size_t);
 
-        template<class F, typename AdditionalCtl>
-        void readAndDoSw(F f, boost::asio::ip::tcp::socket &, const AdditionalCtl &);
-        template<typename AdditionalCtl>
-        void readAndDoSw(NullType, boost::asio::ip::tcp::socket &, const AdditionalCtl &);
+        template<class F, typename... AdditionalCtl>
+        void readAndDoSw(F f, Socket &, AdditionalCtl &&...);
+        template<typename... AdditionalCtl>
+        void readAndDoSw(NullType, Socket &, AdditionalCtl &&...);
+
+        template<class F>
+        class Bind
+        {   // binds 'itself', 'inSocket' and 'whenCompleted' function
+            // with 'readAndDoSw<Parameters...>()';
+            // we cannot use 'std::bind' instead of 'Bind<F>' due to it
+            // doesn't compiles with variadic templates (at least i don't
+            // know how);
+            GccBug47226Satellite dropClassWhenBugWillBeFixed;
+
+            Itself *itself;
+            Socket &inSocket;
+            F whenCompleted;
+
+            public:
+
+            Bind(Itself *i, Socket &s, F f)
+                 : itself(i), inSocket(s), whenCompleted(f) {}
+
+            template<typename... AdditionalCtl>
+            int operator()(AdditionalCtl &&... additionalCtl)
+            {   // move readAndDo(...) call to lambda when bug will be fixed;
+                itself->readAndDoSw(whenCompleted,
+                                    inSocket,
+                                    std::forward<AdditionalCtl>(additionalCtl)...);
+                return 1;
+            }
+        };
 
         public:
 
         Itself(DataBuffer &);
 
-        template<typename AdditionalCtl, class F = NullType>
-        void get(boost::asio::ip::tcp::socket &, const AdditionalCtl &, F = F());
+        template<class F, typename... AdditionalCtl>
+        void get(Socket &, F, AdditionalCtl &&...);
     };
 };
 

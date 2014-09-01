@@ -1,13 +1,16 @@
 #pragma once
 
 #include <string.h>
-#include "Wrappers.hpp"
+#include "Wrappers/ForDataHeader.hpp"
+#include "Wrappers/ForThreadPool.hpp"
+#include "Wrappers/ForLogger.hpp"
+#include "Wrappers/ForTimer.hpp"
 
-#define AndAnyBase , class Base = NullType
-#define DerivedFromBase : virtual public Base
+namespace ProtoTransformer
+{
 
-template<class T AndAnyBase>
-struct SessionHdrIs DerivedFromBase
+template<class T, class Base = NullType>
+struct SessionHdrIs : virtual public Base
 {
     static_assert(IsTransferable<T>::value == true
                   || std::is_same<T, NullType>::value == true,
@@ -16,124 +19,147 @@ struct SessionHdrIs DerivedFromBase
     enum { proto = 1 };
 };
 
-template<typename T AndAnyBase>
-struct SessionSpecificIs DerivedFromBase
+template<typename T, class Base = NullType>
+struct SessionSpecificIs : virtual public Base
 {
     typedef T SessionSpecific;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct InitSessionSpecificIs DerivedFromBase
+template<class T, class Base = NullType>
+struct InitSessionSpecificIs : virtual public Base
 {
     typedef T InitSessionSpecific;
     enum { proto =  0};
 };
 
-template<class T AndAnyBase>
-struct RequestHdrIs DerivedFromBase
+template<class T, class Base = NullType>
+struct RequestHdrIs : virtual public Base
 {
     typedef typename Wrappers::ForDataHeader<T>::Type RequestHdr;
     enum { proto = 1 };
 };
 
-template<typename T AndAnyBase>
-struct RequestCompletionIs DerivedFromBase
+template<typename T, class Base = NullType>
+struct RequestCompletionIs : virtual public Base
 {
     typedef T RequestCompletion;
     enum { proto = 1 };
 };
 
-template<typename T AndAnyBase>
-struct RequestDataReprIs DerivedFromBase
+template<typename T, class Base = NullType>
+struct RequestDataReprIs : virtual public Base
 {
     typedef T RequestDataRepr;
     typedef std::vector<RequestDataRepr> RequestData;
     enum { proto = 1 };
 };
 
-template<typename T AndAnyBase>
-struct AnswerHdrIs DerivedFromBase
+template<typename T, class Base = NullType>
+struct AnswerHdrIs : virtual public Base
 {
     typedef typename Wrappers::ForDataHeader<T>::Type AnswerHdr;
     enum { proto = 1 };
 };
 
-template<class T AndAnyBase>
-struct ServerSpaceIs DerivedFromBase
+template<class T, class Base = NullType>
+struct ServerSpaceIs : virtual public Base
 {
     typedef T ServerSpace;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct AnswerCompletionIs DerivedFromBase
+template<class T, class Base = NullType>
+struct ClientGlobalSpaceIs
+{
+    typedef T ClientGlobalSpace;
+    enum { proto = 0 };
+};
+
+template<class T, class Base = NullType>
+struct AnswerCompletionIs : virtual public Base
 {
     typedef T AnswerCompletion;
     enum { proto = 1 };
 };
 
-template<typename T AndAnyBase>
-struct AnswerDataReprIs DerivedFromBase
+template<typename T, class Base = NullType>
+struct AnswerDataReprIs : virtual public Base
 {
     typedef T AnswerDataRepr;
     typedef std::vector<AnswerDataRepr> AnswerData;
     enum { proto = 1 };
 };
 
-template<class T AndAnyBase>
-struct ServerSendsAnswer DerivedFromBase
+template<class T, class Base = NullType>
+struct ServerSendsAnswer : virtual public Base
 {
     enum { proto = 1 };
     static const int serverSendsAnswer = T::value;
 };
 
-template<class T AndAnyBase>
-struct SessionManagerIs DerivedFromBase
+template<class T, class Base = NullType>
+struct SessionManagerIs : virtual public Base
 {
     typedef T SessionManager;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct ServerThreadPoolIs DerivedFromBase
+template<class T, class Base = NullType>
+struct ServerThreadPoolIs : virtual public Base
 {
     typedef T ServerThreadPool;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct SessionThreadPoolIs DerivedFromBase
+template<class T, class Base = NullType>
+struct SessionThreadPoolIs : virtual public Base
 {
     typedef T SessionThreadPool;
     typedef Wrappers::ForThreadPool<SessionThreadPool> TaskManager;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct ReadingManagerIs DerivedFromBase
+template<class T, class Base = NullType>
+struct ReadingManagerIs : virtual public Base
 {
     typedef T ReadingManager;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct NumOfWorkersIs DerivedFromBase
+template<class T, class Base = NullType>
+struct NumOfWorkersIs : virtual public Base
 {
     static const unsigned int numOfWorkers = T::value;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct ParallelRequestsPerSessionIs DerivedFromBase
+template<class T, class Base = NullType>
+struct ParallelRequestsPerSessionIs : virtual public Base
 {
     static const unsigned int numOfRequestsPerSession = T::value;
     enum { proto = 0 };
 };
 
-template<class T AndAnyBase>
-struct LoggerIs DerivedFromBase
+template<class T, class Base = NullType>
+struct LoggerIs : virtual public Base
 {
     typedef Wrappers::ForLogger<T> Logger;
     enum { proto = 0 };
 };
+
+template<class T , class Base = NullType>
+struct RequestTimeoutIs : virtual public Base
+{
+    typedef typename Wrappers::ForTimer<T> RequestTimeout;
+    enum { proto = 0 };
+};
+
+template<class T, class Base = NullType>
+struct AnswerTimeoutIs : virtual public Base
+{
+    typedef typename Wrappers::ForTimer<T> AnswerTimeout;
+    enum { proto = 0 };
+};
+
+}

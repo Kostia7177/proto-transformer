@@ -1,3 +1,5 @@
+#include "ParamPackManip/filteringAdapter.hpp"
+
 namespace ProtoTransformer
 {
 
@@ -33,13 +35,17 @@ void ReadingManager::Itself<C, D>::afterReading(size_t size)
 }
 
 template<class C, typename D>
-template<class F, typename AdditionalCtl>
+template<class F, typename... AdditionalCtl>
 void ReadingManager::Itself<C, D>::readAndDoSw(
     F f,
-    boost::asio::ip::tcp::socket &inSocket,
-    const AdditionalCtl &additionalCtl)
+    Socket &inSocket,
+    AdditionalCtl &&... additionalCtl)
 {
-    if (size_t sizeOfDataCompleted = readingCompletedSw(additionalCtl))
+    if (size_t sizeOfDataCompleted = filteringAdapter(readingCompleted,
+                                                      static_cast<const DataBuffer &>(dataBufferRef),
+                                                      static_cast<const size_t &>(offset),
+                                                      static_cast<const size_t &>(accumulated),
+                                                      std::forward<AdditionalCtl>(additionalCtl)...))
     {
         afterReading(sizeOfDataCompleted);
         f();
@@ -47,48 +53,65 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
     else
     {
         beforeRecv();
-        inSocket.async_read_some(boost::asio::buffer(&dataBufferRef[accumulated],
-                                 dataBufferRef.size() - accumulated),
-                                 [=, &inSocket] (const boost::system::error_code &errorCode,
-                                                 size_t numOfBytes)
+
+        GccBug47226Satellite bugOverriding;
+        // drop the 'paramsHierarchized' when the g++ bug will be fixed;
+        Params2Hierarchy<BindNotNullsOnly,  AdditionalCtl...> paramsHierarchized(additionalCtl...);
+        GccBug47226Satellite endOfBugOverriding;
+
+        inSocket.async_read_some(Asio::buffer(&dataBufferRef[accumulated],
+                                              dataBufferRef.size() - accumulated),
+                                 [=, &inSocket] (const Sys::error_code &errorCode, size_t numOfBytes)
                                  {
                                     if (errorCode) { return; }
                                     accumulated += numOfBytes;
-                                    readAndDoSw(f, inSocket, additionalCtl);
+
+                                    GccBug47226Satellite bugOverriding1;
+                                    // drop the 'bind' and...
+                                    Bind<F> bind(this, inSocket, f);
+                                    // ...replace the following call with the Bind::operator()(...)'s body...
+                                    Hierarchy2Params<decltype(paramsHierarchized)>::call(bind,
+                                                                                         paramsHierarchized);
+                                    // ...when the g++ bug will be fixed;
+                                    GccBug47226Satellite endOfBugOverriding1;
                                  });
     }
 }
 
 template<class C, typename D>
-template<typename AdditionalCtl>
+template<typename... AdditionalCtl>
 void ReadingManager::Itself<C, D>::readAndDoSw(
     NullType,
-    boost::asio::ip::tcp::socket &inSocket,
-    const AdditionalCtl &additionalCtl)
+    Socket &inSocket,
+    AdditionalCtl &&... additionalCtl)
 {
     size_t sizeOfDataCompleted;
-    while (!(sizeOfDataCompleted = readingCompletedSw(additionalCtl)))
+    while (!(sizeOfDataCompleted = filteringAdapter(readingCompleted,
+                                                    static_cast<const DataBuffer &>(dataBufferRef),
+                                                    static_cast<const size_t &>(offset),
+                                                    static_cast<const size_t &>(accumulated),
+                                                    std::forward<AdditionalCtl>(additionalCtl)...)))
     {
         beforeRecv();
-        accumulated += inSocket.read_some(boost::asio::buffer(&dataBufferRef[accumulated],
-                                                              dataBufferRef.size() - accumulated));
+        accumulated += inSocket.read_some(Asio::buffer(&dataBufferRef[accumulated],
+                                                       dataBufferRef.size() - accumulated));
     }
     afterReading(sizeOfDataCompleted);
 }
 
 template<class C, typename D>
-template<typename AdditionalCtl, class F>
+template<class F, typename... AdditionalCtl>
 void ReadingManager::Itself<C, D>::get(
-    boost::asio::ip::tcp::socket &inSocket,
-    const AdditionalCtl &additionalCtl,
-    F whenCompleted)
+    Socket &inSocket,
+    F whenCompleted,
+    AdditionalCtl &&... additionalCtl)
 {
     dataBufferRef.clear();
     if (!dataRest.empty()){ dataBufferRef.swap(dataRest); }
 
     accumulated = dataBufferRef.size();
     offset = 0;
-    readAndDoSw(whenCompleted, inSocket, additionalCtl);
+    readAndDoSw(whenCompleted, inSocket, additionalCtl...);
 }
 
 }

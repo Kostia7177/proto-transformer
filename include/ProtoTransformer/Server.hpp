@@ -19,9 +19,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "detail/Session.hpp"
+#include "detail/Session/Session.hpp"
 #include "detail/SettingSelector.hpp"
-#include <boost/asio.hpp>
 
 namespace ProtoTransformer
 {
@@ -70,8 +69,8 @@ class Server
                   "Parallel requests processing within a session is available with "
                   "no-answer proto only! ");
 
-    boost::asio::io_service ioService;
-    boost::asio::ip::tcp::acceptor acceptor;
+    Asio::io_service ioService;
+    Ip::tcp::acceptor acceptor;
     typename Cfg::ServerThreadPool workingThreads;
     typename Cfg::Logger logger;
     typedef typename Cfg::ServerSpace ServerSpace;
@@ -90,7 +89,7 @@ class Server
     public:
 
     Server(size_t port, size_t numOfWorkers, ServerSpace *inServerSpace = 0)
-        : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+        : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
           serverSpace(inServerSpace){}
     template<class F> Server(size_t port, F, ServerSpace * = 0);
     ~Server(){}

@@ -12,7 +12,7 @@ typedef Proto
         UsePolicy<AnswerHdrIs, AnyAnswerHdrWrapped>
     > ProtoWithSessionHdr;
 
-typedef typename ProtoWithSessionHdr::RequestData RequestData;
-typedef typename ProtoWithSessionHdr::AnswerData AnswerData;
+typedef ProtoWithSessionHdr::RequestData RequestData;
+typedef ProtoWithSessionHdr::AnswerData AnswerData;
 
 }

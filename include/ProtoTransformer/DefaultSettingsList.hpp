@@ -19,7 +19,7 @@ namespace ProtoTransformer
 // project. So that it is why it moved out from 'detail'.
 // Be carefull, avoid the dumb mistakes (to forget something,
 // for example) - hundred-screen-long error messages are guaranteed!
-typedef Params2Hierarchy
+typedef Params2TypesHierarchy
     <
         // proto describing components:
         //  -- whole session (surprise! :) )
@@ -71,6 +71,7 @@ typedef Params2Hierarchy
                                             // specific (may be by session-header
                                             // data or it's part);
         ServerSpaceIs<NullType>,
+        ClientGlobalSpaceIs<NullType>,
         //
         SessionManagerIs<EmptyManager>, // empty (by default); starts the session
                                         // and forget about it - session will be
@@ -84,6 +85,8 @@ typedef Params2Hierarchy
         ServerThreadPoolIs<boost::threadpool::pool>,
         SessionThreadPoolIs<NullType>,
         LoggerIs<NullType>,
+        RequestTimeoutIs<NullType>,
+        AnswerTimeoutIs<NullType>,
         ReadingManagerIs<ReadingManager>    // that thing, that manages the reading
                                             // when no request size is known (not a
                                             // completion function! just what it calls!

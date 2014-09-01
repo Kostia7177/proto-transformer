@@ -17,6 +17,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 namespace ProtoTransformer
 {
 
@@ -49,7 +50,7 @@ void Client<Cfg>::readAnswerSw(
     NullType,               // instead of answer header;
     const AnyAnswerCanBe &)
 {
-    readingManager.get(ioSocket, sessionHdr);
+    readingManager.get(ioSocket, NullType(), sessionHdr, globalContext);
 }
 
 template<class Cfg>
@@ -59,75 +60,60 @@ void Client<Cfg>::readAnswerSw(
     H &answerHdr,           // but some answer header expected;
     const AnyAnswerCanBe &)
 {
-    read(ioSocket, boost::asio::buffer(&answerHdr, sizeof(answerHdr)));
-    if (uint32_t sizeOfAnswer = Cfg::AnswerHdr::getSize(answerHdr) / sizeof(typename Cfg::AnswerDataRepr))
+    read(ioSocket, Asio::buffer(&answerHdr, sizeof(answerHdr)));
+    uint32_t sizeOfAnswer = Cfg::AnswerHdr::getSize(answerHdr) / sizeof(typename Cfg::AnswerDataRepr);
+    answer.resize(sizeOfAnswer);
+    if (sizeOfAnswer)
     {
-        answer.resize(sizeOfAnswer);
-        read(ioSocket, boost::asio::buffer(answer));
+        read(ioSocket, Asio::buffer(answer));
     }
 }
 
 template<class Cfg>
+template<class... Params>
 Client<Cfg>::Client(
     const std::string &serverAddr,
-    int serverPort,
-    SessionHdr hdr)
+    const int serverPort,
+    Params &&... params)
     : ioSocket(ioService),
-      endPoint(boost::asio::ip::address::from_string(serverAddr), serverPort),
+      endPoint(Ip::address::from_string(serverAddr), serverPort),
       readingManager(answer),
-      sessionHdr(hdr)
+      readingTimer(ioService)
 {
+    ctorParams.populate(serverAddr, serverPort, std::forward<Params>(params)...);
+    sessionHdr = std::move(*ctorParams.template field<sessionHdrIdx>());
+    globalContext = ctorParams.template field<globalContextIdx>();
     ioSocket.connect(endPoint);
     writeSw(sessionHdr);
 }
 
 template<class Cfg>
-const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    RequestHdr &requestHdr,
-    const RequestData &data,
-    AnswerHdr *answerHdr,
-    AnswerAwaiting answerAwaiting)
+template<typename... Params>
+void Client<Cfg>::send(Params &&... params)
 {
-    setSizeSw(requestHdr, data);
-    writeSw(requestHdr);
-    write(ioSocket, boost::asio::buffer(data));
-    if (answerAwaiting == answerSupposed)
-    {
-        readAnswerSw(typename AnswerReadingManager::Completion(), *answerHdr, Int2Type<Cfg::serverSendsAnswer == never>());
-    }
-    return answer;
+    requestParams.populate(std::forward<Params>(params)...);
+
+    setSizeSw(*requestParams.template field<requestHdrIdx>(),
+              *requestParams.template field<dataIdx>());
+    writeSw(*requestParams.template field<requestHdrIdx>());
+    write(ioSocket,
+          Asio::buffer(*requestParams.template field<dataIdx>()));
 }
 
 template<class Cfg>
-const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    RequestHdr &requestHdr,
-    const RequestData &data,
-    AnswerAwaiting answerAwaiting)
+template<typename... Params>
+const typename Client<Cfg>::AnswerData &Client<Cfg>::request(Params &&... params)
 {
-    AnswerHdr answerHdr;
-    request(requestHdr, data, &answerHdr, answerAwaiting);
-    return answer;
-}
-
-template<class Cfg>
-const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    const RequestData &data,
-    AnswerHdr *answerHdr,
-    AnswerAwaiting answerAwaiting)
-{
-    RequestHdr requestHdr;
-    request(requestHdr, data, answerHdr, answerAwaiting);
-    return answer;
-}
-
-template<class Cfg>
-const typename Client<Cfg>::AnswerData &Client<Cfg>::request(
-    const RequestData &data,
-    AnswerAwaiting answerAwaiting)
-{
-    RequestHdr requestHdr;
-    AnswerHdr answerHdr;
-    request(requestHdr, data, &answerHdr, answerAwaiting);
+    send(std::forward<Params>(params)...);
+    readingTimer.set([=]
+                     {
+                     },
+                     sessionHdr,
+                     globalContext);
+    readAnswerSw(typename AnswerReadingManager::Completion(),
+                 *requestParams.template field<answerHdrIdx>(),
+                 Int2Type<Cfg::serverSendsAnswer == never>());
+    readingTimer.cancel();
     return answer;
 }
 

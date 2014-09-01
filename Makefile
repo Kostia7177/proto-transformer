@@ -25,19 +25,22 @@ CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 
 %.oServer:	%.cpp \
 		include/ProtoTransformer/Server.hpp \
-			include/ProtoTransformer/detail/Server.tcc \
-			include/ProtoTransformer/detail/Session.tcc \
-			include/ProtoTransformer/detail/Session.hpp \
-		include/ProtoTransformer/detail/filteringAdapter.hpp \
-			$$(@D)/Proto.hpp \
-			$$(shell ls include/ProtoTransformer/detail/SessionManagers/*) \
-			$$(call GetExampleFeatures,$$(@D),hpp)
+		include/ProtoTransformer/detail/Server.tcc \
+		include/ProtoTransformer/detail/Session/* \
+		include/ProtoTransformer/detail/ParamPackManip/* \
+		include/ProtoTransformer/detail/ParamPackManip/Binders/* \
+		$$(@D)/Proto.hpp \
+		$$(shell ls include/ProtoTransformer/detail/SessionManagers/*) \
+		$$(shell ls include/ProtoTransformer/detail/Wrappers/*) \
+		$$(call GetExampleFeatures,$$(@D),hpp)
 	$(ProvideObj)
 
-%.oClient:		%.cpp \
-			include/ProtoTransformer/Client.hpp \
-			include/ProtoTransformer/detail/Client.tcc \
-			$$(@D)/Proto.hpp \
+%.oClient:	%.cpp \
+		include/ProtoTransformer/Client.hpp \
+		include/ProtoTransformer/detail/Client.tcc \
+		include/ProtoTransformer/detail/ParamPackManip/* \
+		include/ProtoTransformer/detail/ParamPackManip/Binders/* \
+		$$(@D)/Proto.hpp \
 		$$(call GetExampleFeatures,$$(@D),hpp)
 	$(ProvideObj)
 

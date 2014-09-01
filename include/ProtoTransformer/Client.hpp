@@ -22,44 +22,71 @@
 #include <type_traits>
 #include <string>
 #include <boost/asio.hpp>
+#include "detail/ParamPackManip/Params2Hierarchy.hpp"
+#include "detail/ParamPackManip/Binders/BindArgsWithProxies.hpp"
 #include "detail/AnswerCases.hpp"
+#include "detail/Wrappers/ForDataHeader.hpp"
 
 namespace ProtoTransformer
 {
-
-enum AnswerAwaiting { oneWayRequest, answerSupposed };
 
 template<class Cfg>
 class Client
 {
     typedef typename Cfg::AnswerHdr::Itself AnswerHdr;
+    typedef typename Cfg::AnswerCompletion AnswerCompletion;
     enum
     {
         answerHdrNotDefined        = std::is_same<AnswerHdr, NullType>::value,
-        answerCompletionNotDefined = std::is_same<typename Cfg::AnswerCompletion, NullType>::value
+        answerCompletionNotDefined = std::is_same<AnswerCompletion, NullType>::value
     };
     static_assert(answerHdrNotDefined || answerCompletionNotDefined,
                   "Both of answer header and answer completion function cannot be defined. Sorry so much. Fix your proto by choosing one of them and turning to NullType another. ");
     static_assert(!(answerHdrNotDefined && answerCompletionNotDefined),
                   "One (exactly one) of either answer header or answer completion function must be defined. Fix your proto. ");
 
-    boost::asio::io_service ioService;
-    boost::asio::ip::tcp::socket ioSocket;
-    boost::asio::ip::tcp::endpoint endPoint;
-    typedef typename Cfg::RequestHdr::Itself RequestHdr;
+    Asio::io_service ioService;
+    Socket ioSocket;
+    Ip::tcp::endpoint endPoint;
+
     typedef typename Cfg::RequestData RequestData;
     typedef typename Cfg::AnswerData AnswerData;
+
+    Params2Hierarchy
+        <BindArgs,
+            Wrappers::ForDataHeader<typename Cfg::RequestHdr &>,
+            const RequestData &,
+            Wrappers::ForDataHeader<typename Cfg::AnswerHdr *>
+        > requestParams;
+
+    enum { requestHdrIdx = 1, dataIdx, answerHdrIdx };
+
+    typedef typename Cfg::SessionHdr SessionHdr;
+    typedef typename Cfg::ClientGlobalSpace GlobalContext;
+
+    Params2Hierarchy
+        <BindArgs,
+            const std::string &,
+            const int &,
+            const SessionHdr &,
+            GlobalContext *
+        > ctorParams;
+
+    enum { sessionHdrIdx = 3, globalContextIdx };
+
+    SessionHdr sessionHdr;
+    GlobalContext *globalContext;
     AnswerData answer;
+
     typedef typename Cfg::
                      ReadingManager::
-                     template Itself<typename Cfg::AnswerCompletion,
+                     template Itself<AnswerCompletion,
                                      typename Cfg::AnswerDataRepr> AnswerReadingManager;
     AnswerReadingManager readingManager;
-    typedef typename Cfg::SessionHdr SessionHdr;
-    SessionHdr sessionHdr;
+    typename Cfg::AnswerTimeout::TimerItself readingTimer;
 
     template<class T>
-    void writeSw(const T &hdr)      { write(ioSocket, boost::asio::buffer(&hdr, sizeof(hdr))); }
+    void writeSw(const T &hdr)      { write(ioSocket, Asio::buffer(&hdr, sizeof(hdr))); }
     void writeSw(const NullType &)  {}
 
     template<typename H>
@@ -78,13 +105,12 @@ class Client
 
     public:
 
-    Client(const std::string &, int, SessionHdr = SessionHdr());
+    template<class... Params>
+    Client(const std::string &, const int, Params &&...);
     ~Client(){}
 
-    const AnswerData &request(RequestHdr &, const RequestData &, AnswerHdr *, AnswerAwaiting = answerSupposed);
-    const AnswerData &request(RequestHdr &, const RequestData &, AnswerAwaiting = answerSupposed);
-    const AnswerData &request(const RequestData &, AnswerHdr *, AnswerAwaiting = answerSupposed);
-    const AnswerData &request(const RequestData &, AnswerAwaiting = answerSupposed);
+    template<typename... Params> void send(Params &&...);
+    template<typename... Params> const AnswerData &request(Params &&...);
 };
 
 }

@@ -26,7 +26,7 @@ Server<ParamProto, Params...>::Server(
     size_t port,
     F payloadCode,
     ServerSpace *inServerSpace)
-    : acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+    : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
       workingThreads(getNumOfThreads(Cfg::numOfWorkers)),
       serverSpace(inServerSpace)
 {
@@ -53,20 +53,20 @@ void Server<Proto, Params...>::startAccepting(
 {
     SocketPtr newSocketPtr(new Socket(ioService));
     acceptor.async_accept(*newSocketPtr,
-                          [=] (const boost::system::error_code &errorCode)
+                          [=] (const Sys::error_code &errorCode)
                           {
-                              if (!errorCode)
-                              {
-                                  std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg, newSocketPtr, serverSpace);
-                                  sessionManagerPtr->startSession(newSession, payload);
-                                  logger.itself(logger.itself.debug(), "New session %zx started; ", newSession.get());
-                                  startAccepting(cfg, payload, sessionManagerPtr);
-                              }
-                              else
-                              {
+                            if (!errorCode)
+                            {
+                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg, ioService, newSocketPtr, serverSpace);
+                                sessionManagerPtr->startSession(newSession, payload);
+                                logger.itself(logger.itself.debug(), "New session %zx started; ", newSession.get());
+                                startAccepting(cfg, payload, sessionManagerPtr);
+                            }
+                            else
+                            {
                                 logger.itself(logger.itself.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
                                 stop();
-                              }
+                            }
                           });
 }
 

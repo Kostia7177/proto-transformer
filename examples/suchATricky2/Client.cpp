@@ -99,7 +99,7 @@ int main(
             }
             if (hdrOpt == logRequest || hdrOpt == terminateSession)
             {
-                client.request(hdr, requestBuffer, oneWayRequest);
+                client.send(hdr, requestBuffer);
             }
             else
             {

@@ -2,11 +2,25 @@
 
 #include <type_traits>
 #include <thread>
+#include <boost/asio.hpp>
+
+namespace ProtoTransformer
+{
+namespace Asio = boost::asio;
+namespace Ip = Asio::ip;
+typedef Ip::tcp::socket Socket;
+namespace Sys = boost::system;
+}
 
 template<int arg> using Int2Type = std::integral_constant<int, arg>;
 struct NullType {};
 
-template<class T, int meaningful>
+// a pair of types with guarantee-different sizes.
+// used within any sfinae-based detectors.
+typedef char One;
+struct Two { One two[2]; };
+
+template<typename T, int>
 struct ReplaceWithNullIf2nd
 {
     typedef T Type;
@@ -21,15 +35,17 @@ struct ReplaceWithNullIf2nd<T, true>
     NullType value;
     ReplaceWithNullIf2nd(T &){}
 };
-template<typename... Params> struct Params2Hierarchy;
+
+template<typename... Params> struct Params2TypesHierarchy;
+
 template<typename Head, typename... Tail>
-struct Params2Hierarchy<Head, Tail...>
+struct Params2TypesHierarchy<Head, Tail...>
 {
-    struct Type : Head, Params2Hierarchy<Tail...>::Type{};
+    struct Type : Head, Params2TypesHierarchy<Tail...>::Type{};
 };
 
 template<typename Last>
-struct Params2Hierarchy<Last>
+struct Params2TypesHierarchy<Last>
 {
     typedef Last Type;
 };
