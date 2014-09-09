@@ -36,20 +36,6 @@ struct ReplaceWithNullIf2nd<T, true>
     ReplaceWithNullIf2nd(T &){}
 };
 
-template<typename... Params> struct Params2TypesHierarchy;
-
-template<typename Head, typename... Tail>
-struct Params2TypesHierarchy<Head, Tail...>
-{
-    struct Type : Head, Params2TypesHierarchy<Tail...>::Type{};
-};
-
-template<typename Last>
-struct Params2TypesHierarchy<Last>
-{
-    typedef Last Type;
-};
-
 template<typename P>
 struct OneParamChecker
 {
@@ -103,7 +89,7 @@ struct IsTransferable<T,
 };
 
 enum { hardwareConcurrency = 0 };
-unsigned int getNumOfThreads(unsigned int numOf)
+inline unsigned int getNumOfThreads(unsigned int numOf)
 {
     return numOf == hardwareConcurrency ? std::thread::hardware_concurrency() : numOf;
 }

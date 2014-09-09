@@ -1,5 +1,6 @@
 #pragma once
 
+#include "detail/ParamPackManip/Params2TypesHierarchy.hpp"
 #include "detail/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
 #include "detail/AnswerCases.hpp"

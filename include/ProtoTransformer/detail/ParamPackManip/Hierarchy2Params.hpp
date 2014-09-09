@@ -47,7 +47,7 @@ struct Hierarchy2Params
             //       field of 'H' hierarchy if it's necessary;
             // (*1*) adds it to a parameter pack;
             // (*2*) relays the call to the next hierarchy layer;
-            typedef typename H::Core::template Get<idx>::Field Field;
+            typedef typename H::CoreImpl::template Get<idx>::Field Field;
 
             CorrectLook<typename Field::RetType,    // (*0*)
                         Field::pointerRequired,
@@ -64,6 +64,9 @@ struct Hierarchy2Params
 
         // some local tools:
 
+        // metaprogram is used to correct a look of providing compile-time
+        // error message;
+        //
         // mind that hierarchy stores just pointers to values (neither
         // values themselves nor references), so we must clear out the
         // undesirable pointers, where the target field's type is plain;
@@ -88,10 +91,12 @@ struct Hierarchy2Params
             typename std::remove_pointer<Field>::type &value;
             CorrectLook(Field arg) : value(*arg){}
         };
+        // end of metaprogram;
 
-        // find the highest layer of hierarchy (but up to idx1) to that the value can be assigned;
-        template<class H1, int idx1, int = H1::Core::template Get<idx1>::Field::assignable> struct LastAssignable;
-
+        // metaprogram is used to find the highest layer of hierarchy (but up to idx1) to that the value can be
+        // assigned;
+        template<class H1, int idx1, int = H1::CoreImpl::template Get<idx1>::Field::assignable> struct LastAssignable;
+        //
         template<class H1, int idx1>
         struct LastAssignable<H1, idx1, false>
         {   // field is not assignable -
@@ -100,13 +105,13 @@ struct Hierarchy2Params
                 value = LastAssignable<H1, idx1 - 1>::value
             };
         };
-
+        //
         template<class H1, int idx1>
         struct LastAssignable<H1, idx1, true>
         {   // border case - available field is found;
             enum { value = idx1 };
         };
-
+        //
         template<class H1>
         struct LastAssignable<H1, 0, true>
         {   // other border case - no assignable
@@ -114,6 +119,7 @@ struct Hierarchy2Params
             // 0 signals the bottom of recursion;
             enum { value = 0 };
         };
+        //end of metaprogram;
     };
 };
 
