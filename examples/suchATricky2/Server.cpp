@@ -43,7 +43,7 @@ int doSomething(
     const RequestData &inBuffer,
     AnswerData &outBuffer)
 {
-    uint32_t hdrOpt = getHdrField(hdr, optFieldIdx);
+    uint32_t hdrOpt = hdr.get<optField>();
     if (hdrOpt == terminateSession) { return 0; }
     if (hdrOpt == logRequest)
     {
@@ -56,35 +56,46 @@ int doSomething(
     }
 
     Answer answer;
-    snprintf(answer.data, sizeof(answer.data), "At thread id %lu; ", (unsigned long int)pthread_self());
+    answer.set<textField>("At thread id ");
+    answer.get<intField>()[0] = pthread_self();
+    answer.set<numOfInts>(1);
     outBuffer.push_back(answer);
-    snprintf(answer.data, sizeof(answer.data), "i/o buffers %#lx/%#lx; ", (unsigned long int)&inBuffer, (unsigned long int)&outBuffer);
+    answer.set<textField>("i/o buffers ");
+    answer.get<intField>()[0] = (unsigned long int)&inBuffer;
+    answer.get<intField>()[1] = (unsigned long int)&outBuffer;
+    answer.set<numOfInts>(2);
     outBuffer.push_back(answer);
-    snprintf(answer.data, sizeof(answer.data), "started at %lu; ", time(0));
+    answer.set<textField>("started at ");
+    answer.get<intField>()[0] = time(0);
+    answer.set<numOfInts>(1);
     outBuffer.push_back(answer);
 
     if (hdrOpt == sumNumbers)
     {
-        snprintf(answer.data, sizeof(answer.data), "Sum : %u; ", accumulate(inBuffer.begin(), inBuffer.end(), 0));
+        answer.set<textField>("Sum : ");
+        answer.get<intField>()[0] = accumulate(inBuffer.begin(), inBuffer.end(), 0);
+        answer.set<numOfInts>(1);
     }
     else
     {
         RequestData ret(inBuffer);
-        std::stringstream retStr;
         const char *optStr = "Echo";
         if (hdrOpt == sortNumbers)
         {
             std::sort(ret.begin(), ret.end());
             optStr = "Sorted";
         }
+        answer.set<textField>(optStr);
+        size_t idx = 0;
         for (uint32_t retNum : ret)
         {
-            retStr << retNum << "; " ;
+            if (idx == decltype(answer.get<intField>())::size) { break; }
+            answer.get<intField>()[idx ++ ] = retNum;
         }
-        snprintf(answer.data, sizeof(answer.data), "%s: %s ", optStr, retStr.str().c_str());
+        answer.set<numOfInts>(idx);
     }
     outBuffer.push_back(answer);
-    struct timespec pause = { getHdrField(hdr, pauseFieldIdx), 0 };
+    struct timespec pause = { hdr.get<pauseField>(), 0 };
     nanosleep(&pause, 0);
     return 1;
 }

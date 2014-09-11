@@ -66,7 +66,7 @@ int main(
             else
             {
                 data = std::string(requestString, endOfSubstr + 1);
-                try { setHdrField(stoi(std::string(requestString, 0, endOfSubstr)), hdr, pauseFieldIdx); }
+                try { hdr.set<pauseField>(stoi(std::string(requestString, 0, endOfSubstr))); }
                 catch (const std::invalid_argument &exc)
                 {
                     std::cerr << "Cannot understand what pause is to be (" << exc.what() << "); " << std::endl;
@@ -88,7 +88,7 @@ int main(
                                 : (elem == "terminate" ? terminateSession
                                     : (elem == "log" ? logRequest
                                         : echo)));
-                setHdrField(hdrOpt, hdr, optFieldIdx);
+                hdr.set<optField>(hdrOpt);
             }
 
             RequestData requestBuffer;
@@ -107,7 +107,7 @@ int main(
                 std::cout << "Answer: " << std::endl;
                 for (const Answer &answer : answerData)
                 {
-                    std::cout << answer.data << std::endl;
+                    std::cout << answer << std::endl;
                 }
             }
         }

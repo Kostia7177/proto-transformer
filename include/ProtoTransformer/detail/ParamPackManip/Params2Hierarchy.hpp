@@ -110,14 +110,16 @@ class Params2Hierarchy
             typedef const Int2Type<true> AssignField;
 
             template<typename... Args>
-            void setSw(PassBy &,
+            void setSw(
+                PassBy &,
                 Args &&... args)
             {
                 FollowingFields::Type::populate(std::forward<Args>(args)...);
             }
 
             template<typename FirstArg, typename... Args>
-            void setSw(AssignField &,
+            void setSw(
+                AssignField &,
                 FirstArg &&firstArg,
                 Args &&...args)
             {
@@ -154,7 +156,7 @@ class Params2Hierarchy
     //
     // sfinae-based detector of the end of a hierarchy;
     template<class C> static One atLastField(typename C::FollowingFields *);
-    template<typename> static  Two atLastField(...);
+    template<typename> static Two atLastField(...);
     //
     template<class HierarchyLevel,
              int accumulated = 0,

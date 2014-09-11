@@ -1,19 +1,14 @@
-#include <arpa/inet.h>
 #include "ExampleFeatures.hpp"
 
-uint32_t getHdrField(
-    const AnyHdr &hdr,
-    HdrFieldIndex idx)
+std::ostream &operator<<(
+    std::ostream &stream,
+    const Answer &answer)
 {
-    uint32_t ret = *(uint32_t *)(hdr.itself + sizeOfField * idx);
-    return ntohl(ret);
-}
-
-void setHdrField(
-    uint32_t value,
-    AnyHdr &hdr,
-    HdrFieldIndex idx)
-{
-    uint32_t *fieldPtr = (uint32_t *)(hdr.itself + sizeOfField * idx);
-    *fieldPtr = htonl(value);
+    stream << answer.get<textField>() << "\t";
+    for (size_t idx = 0; idx < answer.get<numOfInts>() && idx < answer.get<intField>().size; ++ idx)
+    {
+        if (idx) { stream << ", "; }
+        stream << answer.get<intField>()[idx];
+    }
+    return stream;
 }

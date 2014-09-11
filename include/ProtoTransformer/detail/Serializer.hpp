@@ -9,18 +9,29 @@ namespace ProtoTransformer
 namespace Serializer
 {
 
-enum { fit2Calculated = 0 };
-
 template<typename T, int k>
 struct FieldDesc
-{
-    typedef T Type;
-    enum { key = k };
+{   // describer of the fields that are to be serialized;
+    // wraps field's type and a named numeric value as such
+    // a "virtual structure's" field;
+    // any sequence of theese field descriptions as a
+    // parameter pack of serializer's template represents
+    // a 'virtual structure' that is to be serialized;
+    typedef T Type;     // type of the field;
+    enum { key = k };   // it's kinda name;
 };
+
+enum { fit2Calculated = 0 };
 
 template<size_t bufferSize, typename... FieldDescs>
 class IntegralsOnly
-{
+{   // integral types (and their arrays) serializer;
+    //
+    // 'Bind' structures contain the following:
+    //   - types of input and output data;
+    //   - offset of the field's data at the
+    //     "production buffer";
+    //   - accessing methods;
     template<typename T, size_t offs>
     struct Bind
     {   // common and a simplest case - intergral type binder
@@ -33,22 +44,40 @@ class IntegralsOnly
             Type2Set value,
             unsigned char *addr)
         {
-            *(Type2Set *)addr = ntoh(value, Int2Type<sizeof(Type2Set)>());
+            *(Type2Set *)addr = hton(value, Int2Type<sizeof(Type2Set)>());
         }
 
         static Type2Get get(const unsigned char *addr)
-        {
-            return hton(*(Type2Get *)addr, Int2Type<sizeof(Type2Get)>());
-        }
+        { return ntoh(*(Type2Get *)addr, Int2Type<sizeof(Type2Get)>()); }
 
-        static void export2(const unsigned char *addr, Type2Export &value){ value = get(addr); }
+        static void export2(const unsigned char *addr, Type2Export &value)
+        { value = get(addr); }
     };
 
     template<typename T, size_t length, size_t offs>
     struct Bind<T[length], offs>
     {   // array binder
+        class Type2Get
+        {   // proxy class, invisible for a client's code;
+            // implements read and write access to array's
+            // elements by operator[];
+            T *data;
+            size_t idx;
+
+            public:
+
+            Type2Get(T *addr) : data(addr), idx(0){}
+
+            Type2Get &operator[](size_t i)  { return idx = i, *this; }
+            // access for writing;
+            T operator=(const T &value)     { return data[idx] = hton(value, Int2Type<sizeof(T)>()), value; }
+            // access for reading;
+            operator T()                    { return ntoh(data[idx], Int2Type<sizeof(T)>()); }
+
+            static const size_t size  =length;
+        };
+
         typedef T Type2Set[length];
-        typedef T *Type2Get;
         typedef Type2Set Type2Export;
         static const size_t offset = offs;
 
@@ -56,29 +85,21 @@ class IntegralsOnly
             const Type2Set &value,
             unsigned char *addr)
         {
-            for (size_t idx = 0; idx < length; ++ idx)
-            {
-                ((Type2Get)addr)[idx] = ntoh(value[idx], Int2Type<sizeof(T)>());
-            }
+            std::transform(value, value + length,
+                           (T *)addr,
+                           [=] (T arg)  { return hton(arg, Int2Type<sizeof(T)>()); });
         }
 
-        static Type2Get get(unsigned char *)
-        {
-            struct NotSame {};
-            static_assert(std::is_same<T, NotSame>::value,
-                          "\nNo 'get' method allowed for array types; use an\n"
-                          "\t'export2' method to retrieve a copy of it's data;\n");
-            return 0;
-        }
+        // meaningful only for an array-like subscription and a size request;
+        static Type2Get get(const unsigned char *addr)  { return Type2Get((T *)addr); }
 
         static void export2(
             const unsigned char *addr,
             Type2Export &buffer)
         {
-            for (size_t idx = 0; idx < length; ++ idx)
-            {
-                buffer[idx] = hton(((Type2Get)addr)[idx], Int2Type<sizeof(T)>());
-            }
+            std::transform((const T *)addr, (const T *)addr + length,
+                           buffer,
+                           [=](T arg)   { return ntoh(arg, Int2Type<sizeof(T)>()); });
         }
     };
 
@@ -94,60 +115,81 @@ class IntegralsOnly
             Type2Set value,
             unsigned char *addr)
         {
-            size_t length = strlen(value); 
+            size_t length = strlen(value);
             if (length >= fieldSize) { length = fieldSize - 1; }
             memcpy(addr, value, length);
             addr[length] = 0;
         }
 
-        static Type2Get get(const unsigned char *addr){ return (Type2Get)addr; }
+        static Type2Get get(const unsigned char *addr)
+        { return (Type2Get)addr; }
 
-        static void export2(const unsigned char *addr, Type2Export &buf){ memcpy(buf, addr, fieldSize); }
+        static void export2(const unsigned char *addr, Type2Export &buf)
+        { memcpy(buf, addr, fieldSize); }
     };
 
-    template<int,size_t,typename...>struct Core;
-
-    template<int idx, size_t offset, typename Head, typename... Tail>
-    struct Core<idx, offset, Head, Tail...>
+    // metaprogram that maps fields of a 'virtual structure' to
+    // the 'production buffer'
+    template<size_t,typename...>struct Core;
+    //
+    template<size_t offset, typename Head, typename... Tail>
+    struct Core<offset, Head, Tail...>
     {
         typedef typename Head::Type Type;
-        typedef Core<idx + 1, offset + sizeof(Type), Tail...> FollowingFields;
+        typedef Core<offset + sizeof(Type), Tail...> FollowingFields;
 
-        typedef typename FollowingFields::Buf Buf;
+        typedef typename FollowingFields::Buf Buf;  // actually sees to ----+
+                                                //                          |
+        // a metaprogram that finds required field by it's key;             |
+        template<int key, bool = key == Head::key> struct Navigate2;    //  |
+        //                                                                  |
+        template<int key>   //                                              |
+        struct Navigate2<key, false>    //                                  |
+        {   // not this field - go forward;                                 |
+            //                                                              |
+            // first, check whether any place to go;                        |
+            // sfinae-based detector:                                       |
+            //  - yes, not at the last field...;                            |
+            template<class C>   //                                          |
+            static One notAtLastField(  //                                  |
+                typename C::template Navigate2<key> *); //                  |
+            //  - ...and no, realy at the last field;                       |
+            template<typename> static Two notAtLastField(...);  //          |
+            //                                                              |
+            typedef typename FollowingFields::Core FollowingCore;   //      |
+            // compile-time error message humanizer;                        |
+            static_assert(sizeof(notAtLastField<FollowingCore>(0))  //      |
+                          == sizeof(One),  //                               |
+                          "\n\n\tField with this key (see " //              |
+                          "the line number\n\tat the previous"  //          |
+                          " error message) not found! \n"); //              |
+                          //                                                |
+            typedef typename FollowingCore   //                             |
+                        ::template Navigate2<key>  //                       |
+                        ::Field Field;  // in fact, sees to --------+       |
+        };  //                                                      |       |
+        //                                                          |       |
+        template<int key>   //                                      |       |
+        struct Navigate2<key, true> //                              |       |
+        {   // border case - required field is found;               |       |
+            typedef Bind<Type, offset> Field;  // <-----------------+       |
+        };  //                                                              |
+    };  //                                                                  |
+    //                                                                      |
+    typedef Core<0, FieldDescs...> CoreImpl;    // serializer's core itself |
+    //                                                                      |
+    template<size_t sizeOfBuf>  //                                          |
+    struct Core<sizeOfBuf>  //                                              |
+    {   // border case - parameter pack exhausted, size of the              |
+        // 'production buffer' and the offsets of all fields calculated     |
+        //                                                                  |
+        class Buf   // <----------------------------------------------------+
+        {   // serializer's working body itself;
+            unsigned char data[bufferSize != fit2Calculated ?
+                                bufferSize
+                                : sizeOfBuf];  // serialized data - 'production buffer';
 
-        template<int pos, bool = pos == Head::key> struct Navigate2;
-
-        template<int pos>
-        struct Navigate2<pos, false>
-        {
-            static_assert(pos < sizeof...(FieldDescs),
-                          "\n\n\tPosition 'pos' is  out of range! \n");
-
-            typedef typename FollowingFields
-                        ::Core
-                        ::template Navigate2<pos>
-                        ::Field Field;  // sees to -----------------+
-        };  //                                                      |
-        //                                                          |
-        template<int pos>   //                                      |
-        struct Navigate2<pos, true> //                              |
-        {   // border case                                          |
-            typedef Bind<Type, bufferSize != fit2Calculated ?   //  |
-                                bufferSize  //                      |
-                                : offset> Field;  // <--------------+
-        };
-    };
-
-    typedef Core<0, 0, FieldDescs...> CoreImpl;
-
-    template<int idx, size_t sizeOfBuf>
-    struct Core<idx, sizeOfBuf>
-    {
-        class Buf
-        {
-            unsigned char data[sizeOfBuf];
-
-            public:
+            public: // !!! public interface of the serializer is here;
 
             template<int pos>
             void set(const typename CoreImpl::template Navigate2<pos>::Field::Type2Set &value)
@@ -166,7 +208,7 @@ class IntegralsOnly
             }
 
             template<int pos>
-            void exportField(typename CoreImpl::template Navigate2<pos>::Field::Type2Export &outBuffer) const
+            void export2(typename CoreImpl::template Navigate2<pos>::Field::Type2Export &outBuffer) const
             {
                 typedef typename CoreImpl::template Navigate2<pos>::Field Field;
                 Field::export2(data + Field::offset, outBuffer);
