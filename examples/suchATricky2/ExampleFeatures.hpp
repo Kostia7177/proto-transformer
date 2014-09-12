@@ -20,13 +20,14 @@ typedef Serializer::IntegralsOnly
     >
     ::Buffer AnyHdr;
 
-enum { textField, intField, numOfInts };
+enum { textField, intField, numOfInts, modeField };
 
 typedef Serializer::IntegralsOnly
     <
         Serializer::fit2Calculated,
 
         SerFD<char[1024], textField>,
+        SerFD<char, modeField>,
         SerFD<uint32_t[10], intField>,
         SerFD<uint32_t, numOfInts>
     >

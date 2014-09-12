@@ -62,6 +62,7 @@ int main(
             if (endOfSubstr == std::string::npos)
             {
                 data = requestString;
+                hdr.set<pauseField>(0);
             }
             else
             {

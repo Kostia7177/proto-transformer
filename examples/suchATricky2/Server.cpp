@@ -58,15 +58,18 @@ int doSomething(
     Answer answer;
     answer.set<textField>("At thread id ");
     answer.get<intField>()[0] = pthread_self();
+    answer.set<modeField>('x');
     answer.set<numOfInts>(1);
     outBuffer.push_back(answer);
     answer.set<textField>("i/o buffers ");
     answer.get<intField>()[0] = (unsigned long int)&inBuffer;
     answer.get<intField>()[1] = (unsigned long int)&outBuffer;
+    answer.set<modeField>('x');
     answer.set<numOfInts>(2);
     outBuffer.push_back(answer);
     answer.set<textField>("started at ");
     answer.get<intField>()[0] = time(0);
+    answer.set<modeField>('t');
     answer.set<numOfInts>(1);
     outBuffer.push_back(answer);
 
@@ -94,6 +97,7 @@ int doSomething(
         }
         answer.set<numOfInts>(idx);
     }
+    answer.set<modeField>('d');
     outBuffer.push_back(answer);
     struct timespec pause = { hdr.get<pauseField>(), 0 };
     nanosleep(&pause, 0);

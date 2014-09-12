@@ -13,7 +13,7 @@ template<typename T, int k>
 struct FieldDesc
 {   // describer of the fields that are to be serialized;
     // wraps field's type and a named numeric value as such
-    // a "virtual structure's" field;
+    // a "virtual structure"'s field;
     // any sequence of theese field descriptions as a
     // parameter pack of serializer's template represents
     // a 'virtual structure' that is to be serialized;
@@ -22,6 +22,11 @@ struct FieldDesc
 };
 
 enum { fit2Calculated = 0 };
+enum { valueAsIs = true };
+
+template<typename T>
+constexpr size_t muxBySize(bool raw)
+{ return raw ? 0 : sizeof(T); }
 
 template<size_t bufferSize, typename... FieldDescs>
 class IntegralsOnly
@@ -40,18 +45,17 @@ class IntegralsOnly
         typedef T Type2Export;
         const static size_t offset = offs;
 
-        static void set(
-            Type2Set value,
-            unsigned char *addr)
-        {
-            *(Type2Set *)addr = hton(value, Int2Type<sizeof(Type2Set)>());
-        }
+        template<bool raw>
+        static void set(Type2Set value, unsigned char *addr)
+        { *(Type2Set *)addr = hton(value, Int2Type<muxBySize<Type2Set>(raw)>()); }
 
+        template<bool raw>
         static Type2Get get(const unsigned char *addr)
-        { return ntoh(*(Type2Get *)addr, Int2Type<sizeof(Type2Get)>()); }
+        { return ntoh(*(Type2Get *)addr, Int2Type<muxBySize<Type2Get>(raw)>()); }
 
+        template<bool raw>
         static void export2(const unsigned char *addr, Type2Export &value)
-        { value = get(addr); }
+        { value = get<raw>(addr); }
     };
 
     template<typename T, size_t length, size_t offs>
@@ -70,36 +74,48 @@ class IntegralsOnly
 
             Type2Get &operator[](size_t i)  { return idx = i, *this; }
             // access for writing;
-            T operator=(const T &value)     { return data[idx] = hton(value, Int2Type<sizeof(T)>()), value; }
+            T operator=(const T &value)
+            { return data[idx] = hton(value, Int2Type<sizeof(T)>()), value; }
             // access for reading;
-            operator T()                    { return ntoh(data[idx], Int2Type<sizeof(T)>()); }
+            operator T()        { return ntoh(data[idx], Int2Type<sizeof(T)>()); }
 
-            static const size_t size  =length;
+            static const size_t size = length;
         };
 
         typedef T Type2Set[length];
         typedef Type2Set Type2Export;
         static const size_t offset = offs;
 
+        template<bool raw>
         static void set(
             const Type2Set &value,
             unsigned char *addr)
         {
             std::transform(value, value + length,
                            (T *)addr,
-                           [=] (T arg)  { return hton(arg, Int2Type<sizeof(T)>()); });
+                           [=] (T arg)  { return hton(arg, Int2Type<muxBySize<T>(raw)>()); });
         }
 
-        // meaningful only for an array-like subscription and a size request;
-        static Type2Get get(const unsigned char *addr)  { return Type2Get((T *)addr); }
+        // meaningful only for an array-like subscription and a size request
+        // see 'Type2Get' proxy class comments;
+        template<bool raw>
+        static Type2Get get(const unsigned char *addr)
+        {
+            static_assert(raw == false,
+                          "\n\n\tSorry, no raw access to array's elements implemented yet - use\n"
+                          "\t'set<fieldName, valueAsIs>' or 'export2<fieldName, valueAsIs>'\n"
+                          "\tto set or get array's data as is;\n");
+            return Type2Get((T *)addr);
+        }
 
+        template<bool raw>
         static void export2(
             const unsigned char *addr,
             Type2Export &buffer)
         {
             std::transform((const T *)addr, (const T *)addr + length,
                            buffer,
-                           [=](T arg)   { return ntoh(arg, Int2Type<sizeof(T)>()); });
+                           [=](T arg)   { return ntoh(arg, Int2Type<muxBySize<T>(raw)>()); });
         }
     };
 
@@ -111,6 +127,7 @@ class IntegralsOnly
         typedef char Type2Export[fieldSize];
         static const size_t offset = offs;
 
+        template<bool>
         static void set(
             Type2Set value,
             unsigned char *addr)
@@ -121,9 +138,11 @@ class IntegralsOnly
             addr[length] = 0;
         }
 
+        template<bool>
         static Type2Get get(const unsigned char *addr)
         { return (Type2Get)addr; }
 
+        template<bool>
         static void export2(const unsigned char *addr, Type2Export &buf)
         { memcpy(buf, addr, fieldSize); }
     };
@@ -189,29 +208,29 @@ class IntegralsOnly
                                 bufferSize
                                 : sizeOfBuf];  // serialized data - 'production buffer';
 
-            public: // !!! public interface of the serializer is here;
+            public: // (!!!) public interface of the serializer is here;
 
-            template<int pos>
+            template<int pos, bool raw = false>
             void set(const typename CoreImpl::template Navigate2<pos>::Field::Type2Set &value)
             {
                 typedef typename CoreImpl::template Navigate2<pos>::Field Field;
-                Field::set(value, data + Field::offset);
+                Field::template set<raw>(value, data + Field::offset);
             }
 
-            template<int pos>
+            template<int pos, bool raw = false>
             typename CoreImpl::template Navigate2<pos>::Field::Type2Get get() const
             {
                 typedef typename CoreImpl
                             ::template Navigate2<pos>
                             ::Field Field;
-                return Field::get(data + Field::offset);
+                return Field::template get<raw>(data + Field::offset);
             }
 
-            template<int pos>
+            template<int pos, bool raw = false>
             void export2(typename CoreImpl::template Navigate2<pos>::Field::Type2Export &outBuffer) const
             {
                 typedef typename CoreImpl::template Navigate2<pos>::Field Field;
-                Field::export2(data + Field::offset, outBuffer);
+                Field::template export2<raw>(data + Field::offset, outBuffer);
             }
         };
     };
@@ -219,19 +238,23 @@ class IntegralsOnly
     template<typename T, int size>
     static T ntoh(T t, const Int2Type<size> &)
     {
+        static_assert(!(size > 1),
+                      "\n\n\tNo network to host conversion is known\n");
         return t;
     }
     template<typename T, int size>
     static T hton(T t, const Int2Type<size> &)
     {
+        static_assert(!(size > 1),
+                      "\n\n\tNo host to network conversion is known\n");
         return t;
     }
-    template<typename T>static T ntoh(T t, const Int2Type<16> &){ return ntohs(t); }
-    template<typename T>static T hton(T t, const Int2Type<16> &){ return htons(t); }
-    template<typename T>static T ntoh(T t, const Int2Type<32> &){ return ntohl(t); }
-    template<typename T>static T hton(T t, const Int2Type<32> &){ return htonl(t); }
+    template<typename T>static T ntoh(T t, const Int2Type<2> &){ return ntohs(t); }
+    template<typename T>static T hton(T t, const Int2Type<2> &){ return htons(t); }
+    template<typename T>static T ntoh(T t, const Int2Type<4> &){ return ntohl(t); }
+    template<typename T>static T hton(T t, const Int2Type<4> &){ return htonl(t); }
 
-    public:
+    public: // for public interface see '(!!!)'
 
     typedef typename CoreImpl::Buf Buffer;
 };
