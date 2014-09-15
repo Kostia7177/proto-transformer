@@ -149,7 +149,14 @@ class IntegralsOnly
 
     // metaprogram that maps fields of a 'virtual structure' to
     // the 'production buffer'
-    template<size_t,typename...>struct Core;
+    template
+        <
+            size_t,     // - integrated size of fields that are passed,
+                        // at the bottom of recursion means calculated 
+                        // size of the buffer, or (otherwise, ot at the
+                        // bottom) current field's offset;
+            typename... // - rest of fields;
+        >struct Core;
     //
     template<size_t offset, typename Head, typename... Tail>
     struct Core<offset, Head, Tail...>
@@ -238,15 +245,22 @@ class IntegralsOnly
     template<typename T, int size>
     static T ntoh(T t, const Int2Type<size> &)
     {
-        static_assert(!(size > 1),
-                      "\n\n\tNo network to host conversion is known\n");
+        static_assert(!size             // 'value as is' requested,
+                      || (size == 1),   // or it is a single char;
+                      // all other cases are illegal;
+                      "\n\n\tNo network to host conversion is known for a\n"
+                      "\tlong type - use 'get<fieldName, valueAsIs>'\n"
+                      "\tto allow 'raw' (as is) serialization;\n");
         return t;
     }
     template<typename T, int size>
     static T hton(T t, const Int2Type<size> &)
     {
-        static_assert(!(size > 1),
-                      "\n\n\tNo host to network conversion is known\n");
+        static_assert(!size             // for comments see 'ntoh';
+                      || (size == 1),
+                      "\n\n\tNo host to network conversion is known for a\n"
+                      "\tlong type - use 'set<fieldName, valueAsIs>'\n"
+                      "\tto allow 'raw' (as is) serialization;\n");
         return t;
     }
     template<typename T>static T ntoh(T t, const Int2Type<2> &){ return ntohs(t); }
