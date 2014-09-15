@@ -24,7 +24,7 @@ class Params2Hierarchy
                 int,    // makes the base-class unique;
                 typename... // type sequence (that is to be converted to hierarchy) as is;
             > struct Core;
-
+    //
     template<template<int, typename, int> class Bind1, int idx, int uniquizer, typename Last>
     struct Core<Bind1, idx, uniquizer, Last>
     {   // border case - parameters pack
@@ -32,51 +32,89 @@ class Params2Hierarchy
         // the output hierarchy, stop the recursion
         // and enjoy;
         typedef Bind1<idx, Last, uniquizer> Field;
-        typedef Field Type;
-        template<int> struct Get { typedef Core::Field Field; };
-    };
-
-    template<template<int, typename, int> class Bind1, int idx, int uniquizer, typename Head, typename... Tail>
-    struct Core<Bind1, idx, uniquizer, Head, Tail...>
-    {   // main working case
-        typedef Bind1<idx, Head, uniquizer> Field;   // will be a current field;
-
-        enum { nextPos = Field::length };
-        typedef Core<Bind1, nextPos, uniquizer + 1, Tail...> FollowingFields;
-                                                                        //^^^--
-        // the following structure needed for returning value type deducing   ^
-        // of Params2Hierarchy::field<pos>() and it's intermediates           |
-        // get() and getSw();                                                 |
-        template<int arg, int = arg == Field::pos> struct Get;  //            |
-                                                                    //        |
-        template<int arg>   //                                                |
-        struct Get<arg, false>  //                                            |
-        {   //                                                                |
-            typedef typename FollowingFields    //                            |
-                             ::template Get<arg>    //                        |
-                             ::Field Field; //                                |
-        };  //                                                                |
-        //                                                                    |
-        template<int arg>   //                                                |
-        struct Get<arg, true>   //                                            |
-        {   //                                                                |
-            typedef Core::Field Field;  //                                    |
-        };  //                                                                |
-        //                                                                    |
-        struct Type  //                                                       |
-            : Field,            // current field - placing (or not placing in |
-                                // case of 'NullType' and                     |
-                                // Bind == NotNullsOnly) the current type     |
-                                // into the hierarchy;                        |
-              FollowingFields   // all the other fields - continuing the      |
-              ::Type            // compiler's recursion --------------------->|
+        typedef Field Type;   // <--------------------------------------------------+
+        template<int> struct Get { typedef Core::Field Field; };    //              ^
+    };  //                                                                          |
+    //                                                                              |
+    template<template<int, typename, int> class Bind1,  //                          |
+             int idx,       //                                                      |
+             int uniquizer,     //                                                  |
+             typename Head,         //                                              |
+             typename... Tail>  //                                                  |
+    struct Core<Bind1, idx, uniquizer, Head, Tail...>   //                          |
+    {   // main working case                                                        |
+        typedef Bind1<idx, Head, uniquizer> Field;   // will be a current field;    |
+                            //                                                      |
+        enum { nextPos = Field::length };   //                                      |
+        typedef Core<Bind1, nextPos, uniquizer + 1, Tail...> FollowingFields;   //  |
+                                                                        //^^^-+     |
+        // the following structure needed for returning value type deducing   ^     |
+        // of Params2Hierarchy::field<pos>() and it's intermediates           |     |
+        // get() and getSw();                                                 |     |
+        template<int arg, int = arg == Field::pos> struct Get;  //            |     |
+                                                                    //        |     |
+        template<int arg>   //                                                |     |
+        struct Get<arg, false>  //                                            |     |
+        {   //                                                                |     |
+            typedef typename FollowingFields    //                            |     |
+                             ::template Get<arg>    //                        |     |
+                             ::Field Field; //                                |     |
+        };  //                                                                |     |
+        //                                                                    |     |
+        template<int arg>   //                                                |     |
+        struct Get<arg, true>   //                                            |     |
+        {   //                                                                |     |
+            typedef Core::Field Field;  //                                    |     |
+        };  //                                                                |     |
+        //                                                                    |     |
+        class Type   //                                                       |     |
+            : FollowingFields   // all the other fields except current -      |     |
+              ::Type            // continuing the compiler's recursion ------>+     |
+                                // at the bottom of recursion sees to ------------->+
         {
+            Field field;        // current field - placing (or not placing in
+                                // case of 'NullType' andBind == NotNullsOnly)
+                                // the current type into the hierarchy;
+            // a pair of sfinae-switchers:
+            typedef const Int2Type<false> GoForw;
+            typedef const Int2Type<true> ThisField;
+            //
+            template<int pos>
+            typename Get<pos>::Field::RetType getSw(GoForw &) const
+            { return FollowingFields::Type::template get<pos>(); }
+            //
+            template<int pos>
+            typename Get<pos>::Field::RetType getSw(ThisField &) const  { return field.value; }
+
+            typedef const Int2Type<false> PassBy;
+            typedef const Int2Type<true> AssignField;
+            //
+            template<typename... Args>
+            void setSw(
+                PassBy &,
+                Args &&... args)
+            {
+                FollowingFields::Type::populate(std::forward<Args>(args)...);
+            }
+            //
+            template<typename FirstArg, typename... Args>
+            void setSw(
+                AssignField &,
+                FirstArg &&firstArg,
+                Args &&...args)
+            {
+                field.populate(firstArg);
+                FollowingFields::Type::populate(std::forward<Args>(args)...);
+            }
+
+            public:
+
             // 'length' actually sees at the last field of hierarchy (border
-            // case), wherenested Type is Bind (in other words, where 'Bind::
+            // case), where nested Type is Bind (in other words, where 'Bind::
             // length' is not redefined by (derived class Type)::length);
             enum { length = FollowingFields::Type::length };
 
-            Type(Head &head, Tail &... tail) : Field(head), FollowingFields::Type(tail...) {}
+            Type(Head &head, Tail &... tail) : FollowingFields::Type(tail...), field(head) {}
             Type(){}
 
             template<int pos>
@@ -94,38 +132,7 @@ class Params2Hierarchy
                       args...);
             }
 
-            void populate(){ Field::populate(); }
-
-            private:
-
-            typedef const Int2Type<false> GoForw;
-            typedef const Int2Type<true> ThisField;
-
-            template<int pos>
-            typename Get<pos>::Field::RetType getSw(GoForw &) const     { return FollowingFields::Type::template get<pos>(); }
-            template<int pos>
-            typename Get<pos>::Field::RetType getSw(ThisField &) const  { return Field::value; }
-
-            typedef const Int2Type<false> PassBy;
-            typedef const Int2Type<true> AssignField;
-
-            template<typename... Args>
-            void setSw(
-                PassBy &,
-                Args &&... args)
-            {
-                FollowingFields::Type::populate(std::forward<Args>(args)...);
-            }
-
-            template<typename FirstArg, typename... Args>
-            void setSw(
-                AssignField &,
-                FirstArg &&firstArg,
-                Args &&...args)
-            {
-                Field::populate(firstArg);
-                FollowingFields::Type::populate(std::forward<Args>(args)...);
-            }
+            void populate(){ field.populate(); }
         };
     };
     // end of metaprogram;
@@ -140,7 +147,8 @@ class Params2Hierarchy
     typedef const Int2Type<true> SizeOk;
 
     template<typename... Args>
-    void populateSw(SizeOk &, Args &&... args){ core.populate(std::forward<Args>(args)...); }
+    void populateSw(SizeOk &, Args &&... args)
+    { core.populate(std::forward<Args>(args)...); }
 
     template<typename... Args>
     void populateSw(SizeWrong &, Args &&... )
