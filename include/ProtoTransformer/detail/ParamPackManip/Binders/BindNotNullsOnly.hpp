@@ -6,7 +6,7 @@
 namespace ProtoTransformer
 {
 
-template<int idx, typename T, int uniquizer>
+template<int idx, typename T>
 struct BindNotNullsOnly
     : BinderData<T &>,
       BinderPos<idx + 1>
@@ -15,8 +15,8 @@ struct BindNotNullsOnly
     BindNotNullsOnly(T &arg) : BinderData<T &>(arg){}
 };
 
-template<int idx, typename Pointee, int uniquizer>
-struct BindNotNullsOnly<idx, Pointee *, uniquizer>
+template<int idx, typename Pointee>
+struct BindNotNullsOnly<idx, Pointee *>
     : BinderData<Pointee *>,
       BinderPos<idx + 1>
 {   // pointers must be represented
@@ -24,22 +24,22 @@ struct BindNotNullsOnly<idx, Pointee *, uniquizer>
     BindNotNullsOnly(Pointee *arg) : BinderData<Pointee *>(arg) {}
 };
 
-template<int idx, int uniquizer>
-struct BindNotNullsOnly<idx, NullType, uniquizer>
+template<int idx>
+struct BindNotNullsOnly<idx, NullType>
     : BinderPos<idx>
 {   // hiding the meanless 'NullType'
     BindNotNullsOnly(NullType) {}
 };
 
-template<int idx, int uniquizer>
-struct BindNotNullsOnly<idx, const NullType, uniquizer>
+template<int idx>
+struct BindNotNullsOnly<idx, const NullType>
     : BinderPos<idx>
 {
     BindNotNullsOnly(NullType) {}
 };
 
-template<int idx, int uniquizer>
-struct BindNotNullsOnly<idx, NullType *, uniquizer>
+template<int idx>
+struct BindNotNullsOnly<idx, NullType *>
     : BinderPos<idx>
 {
     BindNotNullsOnly(NullType *) {}

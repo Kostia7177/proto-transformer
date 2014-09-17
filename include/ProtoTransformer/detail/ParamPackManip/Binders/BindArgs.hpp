@@ -13,7 +13,7 @@ struct CleanupQualifiers
     typedef typename std::remove_const<NoRefNoPtr>::type Core;
 };
 
-template<int idx, typename T, int uniquizer>
+template<int idx, typename T>
 class BindArgs
     : public BinderData<typename CleanupQualifiers<T>::NoRefNoPtr *>,
       public BinderPos<idx + 1>
@@ -38,7 +38,7 @@ class BindArgs
     };
 
     template<typename Arg>
-    void populate(Arg &&arg)
+    void set(Arg &&arg)
     {
         static_assert(!pointerRequired
                       || pointerRequired && std::is_pointer<typename std::remove_reference<Arg>::type>::value,
@@ -53,7 +53,6 @@ class BindArgs
                                arg);
     }
 
-    void populate(){}
 };
 
 }

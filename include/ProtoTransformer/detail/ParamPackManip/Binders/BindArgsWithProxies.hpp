@@ -7,36 +7,36 @@
 namespace ProtoTransformer
 {
 
-template<int idx, typename T, int uniquizer>
-struct BindArgs<idx, Wrappers::ForDataHeader<T &>, uniquizer>
-    : BindArgs<idx, typename T::Itself &, uniquizer>
+template<int idx, typename T>
+struct BindArgs<idx, Wrappers::ForDataHeader<T &>>
+    : BindArgs<idx, typename T::Itself &>
 {
 };
 
-template<int idx, typename T, int uniquizer>
-struct BindArgs<idx, Wrappers::ForDataHeader<T *>, uniquizer>
-    : BindArgs<idx, typename T::Itself *, uniquizer>
+template<int idx, typename T>
+struct BindArgs<idx, Wrappers::ForDataHeader<T *>>
+    : BindArgs<idx, typename T::Itself *>
 {
 };
 
-template<int idx, typename T, int uniquizer>
+template<int idx, typename T>
 struct Proxy4JustSize
-    : BindArgs<idx, T, uniquizer>
+    : BindArgs<idx, T>
 {
     JustSize::Itself pointee;
     Proxy4JustSize(){ this->value = &pointee; }
     enum { assignable = false };
 };
 
-template<int idx, int uniquizer>
-struct BindArgs<idx, Wrappers::ForDataHeader<JustSize &>, uniquizer>
-    : Proxy4JustSize<idx, JustSize::Itself &, uniquizer>
+template<int idx>
+struct BindArgs<idx, Wrappers::ForDataHeader<JustSize &>>
+    : Proxy4JustSize<idx, JustSize::Itself &>
 {
 };
 
-template<int idx, int uniquizer>
-struct BindArgs<idx, Wrappers::ForDataHeader<JustSize *>, uniquizer>
-    : Proxy4JustSize<idx, JustSize::Itself *, uniquizer>
+template<int idx>
+struct BindArgs<idx, Wrappers::ForDataHeader<JustSize *>>
+    : Proxy4JustSize<idx, JustSize::Itself *>
 {
 };
 

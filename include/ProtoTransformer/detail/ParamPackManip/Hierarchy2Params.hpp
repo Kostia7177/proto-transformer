@@ -49,7 +49,7 @@ struct Hierarchy2Params
             // (*2*) relays the call to the next hierarchy layer;
             typedef typename H::CoreImpl::template Get<idx>::Field Field;
 
-            CorrectLook<typename Field::RetType,    // (*0*)
+            CorrectLook<decltype(Field::value),    // (*0*)
                         Field::pointerRequired,
                         Field::referenceRequired> correctLook(h.template field<idx>());
 

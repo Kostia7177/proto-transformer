@@ -18,15 +18,9 @@ template<typename T>
 struct BinderData
 {
     T value;
-    typedef T RetType;
 
     BinderData(T arg) : value(arg) {}
     BinderData(){}
-    // 'get' is accessible at the last
-    // field of hierarchy - see (***). within all
-    // other cases it is hiden by same name
-    // whithin derived;
-    template<int> RetType get() const { return value; }
 };
 
 }
