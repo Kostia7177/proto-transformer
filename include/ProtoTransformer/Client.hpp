@@ -26,13 +26,19 @@
 #include "detail/ParamPackManip/Binders/BindArgsWithProxies.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/Wrappers/ForDataHeader.hpp"
+#include "detail/SettingSelector.hpp"
 
 namespace ProtoTransformer
 {
 
-template<class Cfg>
+template<class ParamProto, class... Params>
 class Client
 {
+    struct Cfg
+        : public ParamProto,
+          SettingSelector<ParamProto::selectorIdx + 1, Params...>
+    {
+    };
     typedef typename Cfg::AnswerHdr::Itself AnswerHdr;
     typedef typename Cfg::AnswerCompletion AnswerCompletion;
     enum
@@ -105,12 +111,12 @@ class Client
 
     public:
 
-    template<class... Params>
-    Client(const std::string &, const int, Params &&...);
+    template<class... Args>
+    Client(const std::string &, const int, Args &&...);
     ~Client(){}
 
-    template<typename... Params> void send(Params &&...);
-    template<typename... Params> const AnswerData &request(Params &&...);
+    template<typename... Args> void send(Args &&...);
+    template<typename... Args> const AnswerData &request(Args &&...);
 };
 
 }

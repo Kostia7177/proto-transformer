@@ -21,31 +21,31 @@
 namespace ProtoTransformer
 {
 
-template<class Cfg>
+template<class ParamProto, class... Params>
 template<typename H>
-void Client<Cfg>::setSizeSw(
+void Client<ParamProto, Params...>::setSizeSw(
     H &hdr, // there is any request header specified,
     const RequestData &data)
 {           // so we can set the request size into it;
     Cfg::RequestHdr::setSize2(data.size() * sizeof(typename Cfg::RequestDataRepr), hdr);
 }
 
-template<class Cfg>
-void Client<Cfg>::setSizeSw(
+template<class ParamProto, class... Params>
+void Client<ParamProto, Params...>::setSizeSw(
     NullType,   // request header is not specified;
     const RequestData &)
 {
 }
 
-template<class Cfg>
+template<class ParamProto, class... Params>
 template<class F, typename H>
-void Client<Cfg>::readAnswerSw(const F &, const H &, const NoAnswerSupposed &)
+void Client<ParamProto, Params...>::readAnswerSw(const F &, const H &, const NoAnswerSupposed &)
 {
 }
 
-template<class Cfg>
+template<class ParamProto, class... Params>
 template<class F>
-void Client<Cfg>::readAnswerSw(
+void Client<ParamProto, Params...>::readAnswerSw(
     const F &,              // completion function specified
     NullType,               // instead of answer header;
     const AnyAnswerCanBe &)
@@ -53,9 +53,9 @@ void Client<Cfg>::readAnswerSw(
     readingManager.get(ioSocket, NullType(), sessionHdr, globalContext);
 }
 
-template<class Cfg>
+template<class ParamProto, class... Params>
 template<typename H>
-void Client<Cfg>::readAnswerSw(
+void Client<ParamProto, Params...>::readAnswerSw(
     NullType,               // no completion function specified,
     H &answerHdr,           // but some answer header expected;
     const AnyAnswerCanBe &)
@@ -69,29 +69,29 @@ void Client<Cfg>::readAnswerSw(
     }
 }
 
-template<class Cfg>
-template<class... Params>
-Client<Cfg>::Client(
+template<class ParamProto, class... Params>
+template<class... Args>
+Client<ParamProto, Params...>::Client(
     const std::string &serverAddr,
     const int serverPort,
-    Params &&... params)
+    Args &&... args)
     : ioSocket(ioService),
       endPoint(Ip::address::from_string(serverAddr), serverPort),
       readingManager(answer),
       readingTimer(ioService)
 {
-    ctorParams.populate(serverAddr, serverPort, std::forward<Params>(params)...);
+    ctorParams.populate(serverAddr, serverPort, std::forward<Args>(args)...);
     sessionHdr = std::move(*ctorParams.template field<sessionHdrIdx>());
     globalContext = ctorParams.template field<globalContextIdx>();
     ioSocket.connect(endPoint);
     writeSw(sessionHdr);
 }
 
-template<class Cfg>
-template<typename... Params>
-void Client<Cfg>::send(Params &&... params)
+template<class ParamProto, class... Params>
+template<typename... Args>
+void Client<ParamProto, Params...>::send(Args &&... args)
 {
-    requestParams.populate(std::forward<Params>(params)...);
+    requestParams.populate(std::forward<Args>(args)...);
 
     setSizeSw(*requestParams.template field<requestHdrIdx>(),
               *requestParams.template field<dataIdx>());
@@ -100,11 +100,11 @@ void Client<Cfg>::send(Params &&... params)
           Asio::buffer(*requestParams.template field<dataIdx>()));
 }
 
-template<class Cfg>
-template<typename... Params>
-const typename Client<Cfg>::AnswerData &Client<Cfg>::request(Params &&... params)
+template<class ParamProto, class... Params>
+template<typename... Args>
+const typename Client<ParamProto, Params...>::AnswerData &Client<ParamProto, Params...>::request(Args &&... args)
 {
-    send(std::forward<Params>(params)...);
+    send(std::forward<Args>(args)...);
     readingTimer.set([=]
                      {
                      },

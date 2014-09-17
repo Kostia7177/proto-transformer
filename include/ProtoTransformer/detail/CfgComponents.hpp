@@ -70,7 +70,7 @@ struct ServerSpaceIs : virtual public Base
 };
 
 template<class T, class Base = NullType>
-struct ClientGlobalSpaceIs
+struct ClientGlobalSpaceIs : virtual public Base
 {
     typedef T ClientGlobalSpace;
     enum { proto = 0 };
