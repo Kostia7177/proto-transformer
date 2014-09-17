@@ -153,7 +153,7 @@ class IntegralsOnly
         <
             size_t,     // - integrated size of fields that are passed,
                         // at the bottom of recursion means calculated 
-                        // size of the buffer, or (otherwise, ot at the
+                        // size of the buffer, or (otherwise, not at the
                         // bottom) current field's offset;
             typename... // - rest of fields;
         >struct Core;
