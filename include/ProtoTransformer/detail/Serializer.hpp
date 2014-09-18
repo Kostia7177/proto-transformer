@@ -1,4 +1,81 @@
 #pragma once
+/*
+    Integral types serializer;
+
+    Copyright (C) 2014  Konstantin U. Zozoulia
+
+    candid.71 -at- mail -dot- ru
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+//
+// about:
+//
+// a simple tool to serialize (and deserialize) a pod-like-structures data;
+// does it
+//  - easy and clear;
+//  - type-secured;
+//  - fast;
+// size of an output product is known at a compile time, what makes it usable
+// when application reads any fixed-size header of a following message, or
+// when you want to pass any vector<serialized data> ;
+//
+// appliable to integral types and their arrays. array of char interpreted
+// as a c-string
+//
+// usage:
+//
+// alias the field descriptor:
+//
+//   template<typename F, int pos> using SerFD = Serializer::FieldDesc<F, pos>;
+//
+// define field names:
+//
+//   enum { firstField, otherField, anyTextField, someArrayField };
+//
+// define a serializer:
+//
+//   typedef Serializer::IntegralsOnly
+//           <
+//              Serializer::fit2Calculated, // fit the output buffer to the summary
+//                                          // size of it's fields (or specify the
+//                                          // reserved buffer size);
+//              // fields:
+//              SerFD<uint32_t,         firstField>,
+//              SerFD<char,             otherField>,
+//              SerFD<char[4242],       anyTextField>,
+//              SerFD<int32_t[5],       someArrayField>
+//           >
+//           ::Buffer MySerializer;
+//
+// use it in code:
+//
+//   MySerializer buffer;
+//
+//   buffer.set<firstField>(42);
+//   uint32_t u = buffer.get<firstField>();
+//
+//   int32_t i[5] = { 11, 12, 13, 14, 15 };
+//   buffer.set<someArrayField>(i);
+//   buffer.get<someArrayField>()[3] = 33;
+//   int32_t i1[5];
+//   buffer.export2<someArrayField>(i1);
+//
+//   buffer.set<anyTextField>("hello, serializer!");
+//   buffer.get<anyTextField>();
+//   const char *text = buffer.get<anyTExtField>();
+//
 
 #include "Tools.hpp"
 #include <cstddef>
