@@ -108,7 +108,7 @@ const typename Client<ParamProto, Params...>::AnswerData &Client<ParamProto, Par
     readingTimer.set([=]
                      {
                      },
-                     sessionHdr,
+                     static_cast<const SessionHdr &>(sessionHdr),
                      globalContext);
     readAnswerSw(typename AnswerReadingManager::Completion(),
                  *requestParams.template field<answerHdrIdx>(),
