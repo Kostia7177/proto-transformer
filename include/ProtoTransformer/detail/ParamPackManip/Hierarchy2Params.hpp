@@ -71,7 +71,7 @@ struct Hierarchy2Params
         // values themselves nor references), so we must clear out the
         // undesirable pointers, where the target field's type is plain;
         template<class Field, bool isPtr, bool isRef> struct CorrectLook;
-
+        //
         template<class Field>
         struct CorrectLook<Field *, true, false>
         {
@@ -83,7 +83,7 @@ struct Hierarchy2Params
                                                     // to initialize it - to avoid
                                                     // the surprises in the future;
         };
-
+        //
         template<class Field>
         struct CorrectLook<Field, false, true>
         {
@@ -91,7 +91,7 @@ struct Hierarchy2Params
             typename std::remove_pointer<Field>::type &value;
             CorrectLook(Field arg) : value(*arg){}
         };
-        // end of metaprogram;
+        // end of a metaprogram;
 
         // metaprogram is used to find the highest layer of hierarchy (but up to idx1) to that the value can be
         // assigned;
@@ -119,7 +119,7 @@ struct Hierarchy2Params
             // 0 signals the bottom of recursion;
             enum { value = 0 };
         };
-        //end of metaprogram;
+        //end of a metaprogram;
     };
 };
 
