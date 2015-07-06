@@ -1,0 +1,3 @@
+[submodule "include/TricksAndThings"]
+	path = include/TricksAndThings
+	url = https://github.com/Kostia7177/tricks-and-things.git
