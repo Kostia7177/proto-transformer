@@ -19,7 +19,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "detail/SettingSelector.hpp"
+#include "detail/Configurator/SettingSelector.hpp"
 
 namespace ProtoTransformer
 {

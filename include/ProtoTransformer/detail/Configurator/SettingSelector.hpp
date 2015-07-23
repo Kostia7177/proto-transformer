@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../DefaultSettingsList.hpp"
+#include "../../DefaultSettingsList.hpp"
 
 namespace ProtoTransformer
 {

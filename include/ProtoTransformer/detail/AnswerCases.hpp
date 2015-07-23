@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Tools.hpp"
+#include "../../TricksAndThings/Tools/Int2Type.hpp"
 
 enum { never, atLeastHdr, nothingIfNoData };
 typedef Int2Type<never> NoAnswerAtAll;

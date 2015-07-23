@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstddef>
-#include "../../include/ProtoTransformer/detail/Serializer.hpp"
+#include "../../include/TricksAndThings/Serializer/Serializer.hpp"
 
 enum { sumNumbers, sortNumbers, terminateSession, logRequest, echo, numOfOpts };
 enum { pauseField, optField, sizeField };
 
-namespace Serializer = ProtoTransformer::Serializer;
+namespace Serializer = TricksAndThings::Serializer;
 
 template<typename T, int pos> using SerFD = Serializer::FieldDesc<T, pos>;
 

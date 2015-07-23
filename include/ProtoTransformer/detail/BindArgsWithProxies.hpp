@@ -1,8 +1,8 @@
 #pragma once
 
-#include "BindArgs.hpp"
-#include "../../Wrappers/ForDataHeader.hpp"
-#include "../../JustSize.hpp"
+#include "../../TricksAndThings/ParamPackManip/Binders/BindArgs.hpp"
+#include "Wrappers/ForDataHeader.hpp"
+#include "JustSize.hpp"
 
 namespace ProtoTransformer
 {

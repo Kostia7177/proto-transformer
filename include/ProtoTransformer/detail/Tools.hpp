@@ -1,7 +1,8 @@
 #pragma once
 
-#include <type_traits>
-#include <thread>
+#include"../../TricksAndThings/Tools/NullType.hpp"
+#include"../../TricksAndThings/Tools/OneTwo.hpp"
+#include<thread>
 #include <boost/asio.hpp>
 
 namespace ProtoTransformer
@@ -11,14 +12,6 @@ namespace Ip = Asio::ip;
 typedef Ip::tcp::socket Socket;
 namespace Sys = boost::system;
 }
-
-template<int arg> using Int2Type = std::integral_constant<int, arg>;
-struct NullType {};
-
-// a pair of types with guarantee-different sizes.
-// used within any sfinae-based detectors.
-typedef char One;
-struct Two { One two[2]; };
 
 template<typename T, int>
 struct ReplaceWithNullIf2nd

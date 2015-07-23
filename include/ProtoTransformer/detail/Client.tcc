@@ -72,15 +72,29 @@ void Client<ParamProto, Params...>::readAnswerSw(
 template<class ParamProto, class... Params>
 template<class... Args>
 Client<ParamProto, Params...>::Client(
-    const std::string &serverAddr,
-    const int serverPort,
+    const std::string &addr,
+    const int p,
     Args &&... args)
     : ioSocket(ioService),
+      serverAddr(addr),
+      serverPort(p),
       endPoint(Ip::address::from_string(serverAddr), serverPort),
       readingManager(answer),
       readingTimer(ioService)
 {
+    Params2Hierarchy
+        <BindArgs,
+            const std::string &,
+            const int &,
+            const SessionHdr &,
+            GlobalContext *
+        > ctorParams;
+
+    enum { serverAddrIdx = 1, serverPortIdx, sessionHdrIdx, globalContextIdx };
+
     ctorParams.populate(serverAddr, serverPort, std::forward<Args>(args)...);
+    serverAddr = std::move(*ctorParams.template field<serverAddrIdx>());
+    serverPort = *ctorParams.template field<serverPortIdx>();
     sessionHdr = std::move(*ctorParams.template field<sessionHdrIdx>());
     globalContext = ctorParams.template field<globalContextIdx>();
     ioSocket.connect(endPoint);
@@ -107,8 +121,11 @@ const typename Client<ParamProto, Params...>::AnswerData &Client<ParamProto, Par
     send(std::forward<Args>(args)...);
     readingTimer.set([=]
                      {
+                        throw std::runtime_error("Answer timed out; ");
                      },
-                     static_cast<const SessionHdr &>(sessionHdr),
+                     const_cast<const std::string &>(serverAddr),
+                     const_cast<const int &>(serverPort),
+                     const_cast<const SessionHdr &>(sessionHdr),
                      globalContext);
     readAnswerSw(typename AnswerReadingManager::Completion(),
                  *requestParams.template field<answerHdrIdx>(),

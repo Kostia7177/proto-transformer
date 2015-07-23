@@ -1,7 +1,7 @@
 #pragma once
 
-#include "detail/ParamPackManip/Params2TypesHierarchy.hpp"
-#include "detail/CfgComponents.hpp"
+#include "../TricksAndThings/ParamPackManip/Params2TypesHierarchy.hpp"
+#include "detail/Configurator/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/SessionManagers/WithMap.hpp"

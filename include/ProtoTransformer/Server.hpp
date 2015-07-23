@@ -20,7 +20,7 @@
 */
 
 #include "detail/Session/Session.hpp"
-#include "detail/SettingSelector.hpp"
+#include "detail/Configurator/SettingSelector.hpp"
 
 namespace ProtoTransformer
 {

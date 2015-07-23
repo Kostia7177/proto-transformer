@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Tools.hpp"
-#include "../ParamPackManip/filteringAdapter.hpp"
+#include "../../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
 #include "../Session/SessionContext.hpp"
 #include "../GccBug47226Satellite.hpp"
 #include <boost/asio.hpp>

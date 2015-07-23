@@ -18,7 +18,7 @@ All			= $(call Examples,Server) $(call Examples,Client)
 Objs			= $(shell find examples/ -name "*.o" -o -name "*.oServer" -o -name "*.oClient")
 
 ProvideObj		= g++ $(CFLAGS) -o $@ -c $<
-LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_thread -lpthread -lboost_program_options
+LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_chrono -lboost_thread -lpthread -lboost_program_options -latomic
 
 all: $(All)
 install:
@@ -35,8 +35,8 @@ CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 		include/ProtoTransformer/Server.hpp \
 		include/ProtoTransformer/detail/Server.tcc \
 		include/ProtoTransformer/detail/Session/* \
-		include/ProtoTransformer/detail/ParamPackManip/* \
-		include/ProtoTransformer/detail/ParamPackManip/Binders/* \
+		include/TricksAndThings/ParamPackManip/* \
+		include/TricksAndThings/ParamPackManip/Binders/* \
 		$$(@D)/Proto.hpp \
 		$$(shell ls include/ProtoTransformer/detail/SessionManagers/*) \
 		$$(shell ls include/ProtoTransformer/detail/Wrappers/*) \
@@ -47,8 +47,8 @@ CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 %.oClient:	%.cpp \
 		include/ProtoTransformer/Client.hpp \
 		include/ProtoTransformer/detail/Client.tcc \
-		include/ProtoTransformer/detail/ParamPackManip/* \
-		include/ProtoTransformer/detail/ParamPackManip/Binders/* \
+		include/TricksAndThings/ParamPackManip/* \
+		include/TricksAndThings/ParamPackManip/Binders/* \
 		$$(@D)/Proto.hpp \
 		$$(call GetExampleFeatures,$$(@D),hpp) \
 		$$(call GetExampleDeps,$$(@D))

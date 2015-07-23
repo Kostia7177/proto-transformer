@@ -22,11 +22,11 @@
 #include <type_traits>
 #include <string>
 #include <boost/asio.hpp>
-#include "detail/ParamPackManip/Params2Hierarchy.hpp"
-#include "detail/ParamPackManip/Binders/BindArgsWithProxies.hpp"
+#include "../TricksAndThings/ParamPackManip/Params2Hierarchy.hpp"
+#include "detail/BindArgsWithProxies.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/Wrappers/ForDataHeader.hpp"
-#include "detail/SettingSelector.hpp"
+#include "detail/Configurator/SettingSelector.hpp"
 
 namespace ProtoTransformer
 {
@@ -53,6 +53,8 @@ class Client
 
     Asio::io_service ioService;
     Socket ioSocket;
+    std::string serverAddr;
+    int serverPort;
     Ip::tcp::endpoint endPoint;
 
     typedef typename Cfg::RequestData RequestData;
@@ -69,16 +71,6 @@ class Client
 
     typedef typename Cfg::SessionHdr SessionHdr;
     typedef typename Cfg::ClientGlobalSpace GlobalContext;
-
-    Params2Hierarchy
-        <BindArgs,
-            const std::string &,
-            const int &,
-            const SessionHdr &,
-            GlobalContext *
-        > ctorParams;
-
-    enum { sessionHdrIdx = 3, globalContextIdx };
 
     SessionHdr sessionHdr;
     GlobalContext *globalContext;

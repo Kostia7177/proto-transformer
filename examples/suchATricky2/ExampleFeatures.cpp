@@ -1,3 +1,4 @@
+#include<ostream>
 #include "ExampleFeatures.hpp"
 
 std::ostream &operator<<(
