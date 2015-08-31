@@ -1,5 +1,6 @@
 #include <ProtoTransformer/Server.hpp>
 #include "Proto.hpp"
+#include <set>
 #include <sstream>
 #include <boost/bind.hpp>
 #include <mutex>

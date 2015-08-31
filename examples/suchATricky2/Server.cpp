@@ -1,6 +1,5 @@
 #include <ProtoTransformer/Server.hpp>
 #include "Proto.hpp"
-#include "../../include/TricksAndThings/ThreadPool/ThreadPool.hpp"
 #include <algorithm>
 #include <sstream>
 
@@ -32,7 +31,6 @@ int main(
         <
             ProtoWithAnyHdr,
             UsePolicy<SessionManagerIs, SessionManagerWithMap>,
-            UsePolicy<ServerThreadPoolIs, TricksAndThings::ThreadPool<>>,
             UsePolicy<LoggerIs, SyslogLogger>
         > ServerInstance;
     ServerInstance server(port, doSomething);

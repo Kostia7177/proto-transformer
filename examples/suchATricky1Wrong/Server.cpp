@@ -3,6 +3,7 @@
 #include <sstream>
 #include <boost/bind.hpp>
 #include <mutex>
+#include <set>
 
 int usage(
     int ret,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../TricksAndThings/ThreadPool/ThreadPool.hpp"
 #include "../TricksAndThings/ParamPackManip/Params2TypesHierarchy.hpp"
 #include "detail/Configurator/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
@@ -10,7 +11,6 @@
 #include "detail/ReadingManager.hpp"
 #include "detail/Loggers/Syslog.hpp"
 #include "detail/Loggers/Stderr.hpp"
-#include <threadpool.hpp>
 
 namespace ProtoTransformer
 {
@@ -83,7 +83,7 @@ typedef Params2TypesHierarchy
                                         // terminates them on server's exit; see
                                         // SessionManagers/WithMap.hpp;
         //
-        ServerThreadPoolIs<boost::threadpool::pool>,
+        ServerThreadPoolIs<TricksAndThings::ThreadPool<>>,
         SessionThreadPoolIs<NullType>,
         LoggerIs<NullType>,
         RequestTimeoutIs<NullType>,
