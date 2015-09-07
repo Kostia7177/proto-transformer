@@ -7,6 +7,7 @@
 #include "detail/AnswerCases.hpp"
 #include "detail/SessionManagers/WithMap.hpp"
 #include "detail/SessionManagers/Empty.hpp"
+#include "detail/StopServerOnSigint.hpp"
 #include "detail/JustSize.hpp"
 #include "detail/ReadingManager.hpp"
 #include "detail/Loggers/Syslog.hpp"
@@ -20,7 +21,7 @@ namespace ProtoTransformer
 // project. So that it is why it moved out from 'detail'.
 // Be carefull, avoid the dumb mistakes (to forget something,
 // for example) - hundred-screen-long error messages are guaranteed!
-typedef Params2TypesHierarchy
+typedef TricksAndThings::Params2TypesHierarchy
     <
         // proto describing components:
         //  -- whole session (surprise! :) )
@@ -83,11 +84,14 @@ typedef Params2TypesHierarchy
                                         // terminates them on server's exit; see
                                         // SessionManagers/WithMap.hpp;
         //
-        ServerThreadPoolIs<TricksAndThings::ThreadPool<>>,
+        ServerThreadPoolIs<TricksAndThings
+                           ::ThreadPool<TricksAndThings
+                                        ::shutdownImmediate>>,
         SessionThreadPoolIs<NullType>,
         LoggerIs<NullType>,
         RequestTimeoutIs<NullType>,
         AnswerTimeoutIs<NullType>,
+        SigintHandlerIs<NullType>,
         ReadingManagerIs<ReadingManager>    // that thing, that manages the reading
                                             // when no request size is known (not a
                                             // completion function! just what it calls!

@@ -60,8 +60,8 @@ class Client
     typedef typename Cfg::RequestData RequestData;
     typedef typename Cfg::AnswerData AnswerData;
 
-    Params2Hierarchy
-        <BindArgs,
+    TricksAndThings::Params2Hierarchy
+        <TricksAndThings::BindArgs,
             Wrappers::ForDataHeader<typename Cfg::RequestHdr &>,
             const RequestData &,
             Wrappers::ForDataHeader<typename Cfg::AnswerHdr *>

@@ -162,4 +162,11 @@ struct AnswerTimeoutIs : virtual public Base
     enum { proto = 0 };
 };
 
+template<class T, class Base = NullType>
+struct SigintHandlerIs : virtual public Base
+{
+    typedef T SigintHandler;
+    enum { proto = 0 };
+};
+
 }

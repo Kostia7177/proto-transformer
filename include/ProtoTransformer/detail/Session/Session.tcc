@@ -145,7 +145,8 @@ void Session<Cfg>::processRequest(
 
                                                 // now throw out all the NullType-things and call
                                                 // the user's payload code with all that remains;
-                                                retCode = filteringAdapter(payload,
+                                                retCode = TricksAndThings::
+                                                          filteringAdapter(payload,
                                                                            sessionContext.sessionHdrRO,
                                                                            // turn the invariants to const;
                                                                            static_cast<const typename RequestHdrCorrected::
@@ -269,6 +270,7 @@ template<class Cfg>
 template<class InitSessionSpecific>
 void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
 {
+    TricksAndThings::
     filteringAdapter(f, static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr), sessionContext.sessionSpecific);
 }
 template<class Cfg>

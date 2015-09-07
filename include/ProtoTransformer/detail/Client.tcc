@@ -82,8 +82,8 @@ Client<ParamProto, Params...>::Client(
       readingManager(answer),
       readingTimer(ioService)
 {
-    Params2Hierarchy
-        <BindArgs,
+    TricksAndThings::Params2Hierarchy
+        <TricksAndThings::BindArgs,
             const std::string &,
             const int &,
             const SessionHdr &,

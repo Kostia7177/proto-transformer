@@ -41,7 +41,8 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
     Socket &inSocket,
     AdditionalCtl &&... additionalCtl)
 {
-    if (size_t sizeOfDataCompleted = filteringAdapter(readingCompleted,
+    if (size_t sizeOfDataCompleted = TricksAndThings::
+                                     filteringAdapter(readingCompleted,
                                                       static_cast<const DataBuffer &>(dataBufferRef),
                                                       static_cast<const size_t &>(offset),
                                                       static_cast<const size_t &>(accumulated),
@@ -56,7 +57,7 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
 
         GccBug47226Satellite bugOverriding;
         // drop the 'paramsHierarchized' when the g++ bug will be fixed;
-        Params2Hierarchy<BindNotNullsOnly,  AdditionalCtl...> paramsHierarchized(additionalCtl...);
+        TricksAndThings::Params2Hierarchy<TricksAndThings::BindNotNullsOnly,  AdditionalCtl...> paramsHierarchized(additionalCtl...);
         GccBug47226Satellite endOfBugOverriding;
 
         inSocket.async_read_some(Asio::buffer(&dataBufferRef[accumulated],
@@ -70,7 +71,7 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
                                     // drop the 'bind' and...
                                     Bind<F> bind(this, inSocket, f);
                                     // ...replace the following call with the Bind::operator()(...)'s body...
-                                    Hierarchy2Params<decltype(paramsHierarchized)>::call(bind,
+                                    TricksAndThings::Hierarchy2Params<decltype(paramsHierarchized)>::call(bind,
                                                                                          paramsHierarchized);
                                     // ...when the g++ bug will be fixed;
                                     GccBug47226Satellite endOfBugOverriding1;
@@ -86,7 +87,8 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
     AdditionalCtl &&... additionalCtl)
 {
     size_t sizeOfDataCompleted;
-    while (!(sizeOfDataCompleted = filteringAdapter(readingCompleted,
+    while (!(sizeOfDataCompleted = TricksAndThings::
+                                   filteringAdapter(readingCompleted,
                                                     static_cast<const DataBuffer &>(dataBufferRef),
                                                     static_cast<const size_t &>(offset),
                                                     static_cast<const size_t &>(accumulated),

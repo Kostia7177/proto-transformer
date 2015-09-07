@@ -23,6 +23,16 @@ struct Durations
 
 int doSomething(const AnySessionHdr &, const RequestData &, AnySessionSpecific &sessionSpecific, AnyAnswerHdr &, AnswerData &, Durations *);
 
+struct OnInterrupt
+{
+    struct BeforeServerStop
+    {
+        void operator()(int sigNum)
+        { std::cout << "Actions before server will be stopped by signal "
+          << sigNum << " are in progress..." << std::endl; }
+    };
+};
+
 int main(
     int argc,
     char **argv)
@@ -38,7 +48,8 @@ int main(
     typedef Server<ProtoWithSessionHdr,
                    UsePolicy<SessionSpecificIs, AnySessionSpecific>,
                    UsePolicy<InitSessionSpecificIs, InitAnySessionSpecific>,
-                   UsePolicy<ServerSpaceIs, Durations>
+                   UsePolicy<ServerSpaceIs, Durations>,
+                   UsePolicy<SigintHandlerIs, OnInterrupt>
                   > ServerInstance;
 
     Durations durations;

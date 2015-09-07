@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../Tools.hpp"
-#include "../../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
 #include "../Session/SessionContext.hpp"
-#include "../GccBug47226Satellite.hpp"
+#include "../../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
+#include "../../../TricksAndThings/Tools/GccBug47226Satellite.hpp"
 #include <boost/asio.hpp>
 
 namespace ProtoTransformer
@@ -27,7 +27,7 @@ struct ForTimer
                                                                 // pack, the same as at (**);
         {
             typename T::Action action;
-            return Hierarchy2Params<H>::call(action, params);   // (*gccBug47226**),
+            return TricksAndThings::Hierarchy2Params<H>::call(action, params);   // (*gccBug47226**),
                                                                 // 'Hierarchy2Params' also is
                                                                 // to be replaced
                                                                 // with 'filteredHierarchy()'
@@ -46,11 +46,11 @@ struct ForTimer
             F defaultAction,
             Params &... params)
         {
-            int expiresAfter = filteringAdapter(&Timeout::value, params...);
+            int expiresAfter = TricksAndThings::filteringAdapter(&Timeout::value, params...);
             timer.expires_from_now(boost::posix_time::milliseconds(expiresAfter));
 
             GccBug47226Satellite bugOverriding;
-            Params2Hierarchy<BindNotNullsOnly, Params...> hierarchizedParams(params...);
+            TricksAndThings::Params2Hierarchy<TricksAndThings::BindNotNullsOnly, Params...> hierarchizedParams(params...);
             GccBug47226Satellite endOfBugOverriding;
 
             timer.async_wait([=](const boost::system::error_code &errorCode)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Tools.hpp"
-#include "GccBug47226Satellite.hpp"
+#include "../../TricksAndThings/Tools/GccBug47226Satellite.hpp"
 
 namespace ProtoTransformer
 {

@@ -11,7 +11,7 @@ namespace Asio = boost::asio;
 namespace Ip = Asio::ip;
 typedef Ip::tcp::socket Socket;
 namespace Sys = boost::system;
-}
+typedef TricksAndThings::NullType NullType;
 
 template<typename T, int>
 struct ReplaceWithNullIf2nd
@@ -85,4 +85,5 @@ enum { hardwareConcurrency = 0 };
 inline unsigned int getNumOfThreads(unsigned int numOf)
 {
     return numOf == hardwareConcurrency ? std::thread::hardware_concurrency() : numOf;
+}
 }

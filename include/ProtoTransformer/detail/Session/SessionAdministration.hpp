@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../Tools.hpp"
+
+namespace ProtoTransformer {
+
 template<class Cfg, class S>
 struct SessionAdministration
 {
@@ -25,3 +29,5 @@ struct SessionAdministration
         : readingManager(buffer),
           taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)){}
 };
+
+}

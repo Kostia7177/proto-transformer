@@ -31,7 +31,8 @@ int main(
         <
             ProtoWithAnyHdr,
             UsePolicy<SessionManagerIs, SessionManagerWithMap>,
-            UsePolicy<LoggerIs, SyslogLogger>
+            UsePolicy<LoggerIs, SyslogLogger>,
+            UsePolicy<SigintHandlerIs, StopServerOnSigint>
         > ServerInstance;
     ServerInstance server(port, doSomething);
 

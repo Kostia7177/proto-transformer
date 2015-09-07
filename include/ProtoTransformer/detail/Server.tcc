@@ -16,32 +16,25 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include"signalHandlerSetupSwitchers.hpp"
 
 namespace ProtoTransformer
 {
 
-template<class ParamProto, class... Params>
-template<class F>
-Server<ParamProto, Params...>::Server(
-    size_t port,
-    F payloadCode,
-    ServerSpace *inServerSpace)
-    : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
-      workingThreads(getNumOfThreads(Cfg::numOfWorkers)),
-      serverSpace(inServerSpace)
+template<class Proto, class... Params>
+template<class Handler>
+void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
 {
-    accept(payloadCode);
-}
-
-template<class ParamProto, class... Params>
-template<class F>
-void Server<ParamProto, Params...>::accept(
-    F payload)
-{
-    sessionManagerPtr = SessionManagerPtr(new SessionManager);
-    startAccepting(Cfg(), payload, sessionManagerPtr);
-    for (size_t idx = 0; idx < workingThreads.size(); workingThreads.schedule([&] { ioService.run(); }), ++ idx);
-    workingThreads.wait();
+    sigHandler.add(SIGINT);
+    sigHandler.add(SIGTERM);
+    sigHandler.async_wait([=](const Sys::error_code &errorCode, int sigNum)
+                          {
+                            if (!errorCode)
+                            {
+                                beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0)) == sizeof(One)>(), handler, sigNum);
+                                stop();
+                            }
+                          });
 }
 
 template<class Proto, class... Params>
@@ -68,6 +61,32 @@ void Server<Proto, Params...>::startAccepting(
                                 stop();
                             }
                           });
+}
+
+template<class ParamProto, class... Params>
+template<class F>
+Server<ParamProto, Params...>::Server(
+    size_t port,
+    F payloadCode,
+    ServerSpace *inServerSpace)
+    : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
+      workingThreads(getNumOfThreads(Cfg::numOfWorkers)),
+      serverSpace(inServerSpace),
+      sigHandler(ioService)
+{
+    accept(payloadCode);
+}
+
+template<class ParamProto, class... Params>
+template<class F>
+void Server<ParamProto, Params...>::accept(
+    F payload)
+{
+    sessionManagerPtr = SessionManagerPtr(new SessionManager);
+    startAccepting(Cfg(), payload, sessionManagerPtr);
+    for (size_t idx = 0; idx < workingThreads.size(); workingThreads.schedule([&] { ioService.run(); }), ++ idx);
+    setupSigHandler(typename Cfg::SigintHandler());
+    workingThreads.wait();
 }
 
 }

@@ -80,8 +80,13 @@ class Server
     typedef std::shared_ptr<SessionManager> SessionManagerPtr;
     SessionManagerPtr sessionManagerPtr;
 
+    Asio::signal_set sigHandler;
     Server(const Server &);
     Server &operator= (const Server &);
+
+    void setupSigHandler(NullType){}
+    template<class H>
+    void setupSigHandler(const H &);
 
     // working body;
     template<class F> void startAccepting(Cfg, F, SessionManagerPtr);
@@ -90,7 +95,8 @@ class Server
 
     Server(size_t port, size_t numOfWorkers, ServerSpace *inServerSpace = 0)
         : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
-          serverSpace(inServerSpace){}
+          serverSpace(inServerSpace),
+          sigHandler(ioService){}
     template<class F> Server(size_t port, F, ServerSpace * = 0);
     ~Server(){}
 
