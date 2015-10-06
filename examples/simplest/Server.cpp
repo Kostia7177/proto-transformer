@@ -12,8 +12,6 @@ int usage(
 
 using namespace ProtoTransformer;
 
-int doSomething(const RequestData &, AnswerData &);
-
 int main(
     int argc,
     char **argv)
@@ -26,19 +24,17 @@ int main(
         return 1;
     }
 
-    Server<ProtoSimplest>(port, doSomething);
+    Server<ProtoSimplest>(port, [&](const RequestData &inBuffer, AnswerData &outBuffer)
+                                {
+                                    std::string inBufStr = std::string(inBuffer.begin(), inBuffer.end());
+                                    int retCode = inBufStr != "terminate";
+
+                                    boost::to_upper(inBufStr);
+
+                                    outBuffer = AnswerData(inBufStr.begin(), inBufStr.end());
+
+                                    return retCode;
+                                });
 
     return 0;
-}
-
-int doSomething(const RequestData &inBuffer, AnswerData &outBuffer)
-{
-    std::string inBufStr = std::string(inBuffer.begin(), inBuffer.end());
-    int retCode = inBufStr != "terminate";
-
-    boost::to_upper(inBufStr);
-
-    outBuffer = AnswerData(inBufStr.begin(), inBufStr.end());
-
-    return retCode;
 }
