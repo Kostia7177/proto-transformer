@@ -16,9 +16,14 @@ GetExampleDeps		= $(shell if test -f $1/ExampleFeatures.hpp; \
 				  fi)
 All			= $(call Examples,Server) $(call Examples,Client)
 Objs			= $(shell find examples/ -name "*.o" -o -name "*.oServer" -o -name "*.oClient")
+Headers			= $(shell find $1 -name "*.hpp" -o -name "*.tcc")
 
 ProvideObj		= g++ $(CFLAGS) -o $@ -c $<
+#ProvideObj += -fsanitize=address
+#ProvideObj += -pg
 LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_chrono -lboost_thread -lpthread -lboost_program_options -latomic
+#LinkBinary += -fsanitize=address
+#LinkBinary += -pg
 
 all: $(All)
 install:
@@ -32,23 +37,27 @@ CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 .SECONDEXPANSION:
 
 %.oServer:	%.cpp \
+		$$(call Headers,include/TricksAndThings/ParamPackManip/) \
+		$$(call Headers,include/TricksAndThings/SignatureManip/) \
+		$$(call Headers,include/TricksAndThings/ThreadPool/) \
+		$$(call Headers,include/TricksAndThings/LockFree/) \
+		$$(call Headers,include/TricksAndThings/Tools/) \
 		include/ProtoTransformer/Server.hpp \
 		include/ProtoTransformer/detail/Server.tcc \
 		include/ProtoTransformer/detail/Session/* \
-		include/TricksAndThings/ParamPackManip/* \
-		include/TricksAndThings/ParamPackManip/Binders/* \
 		$$(@D)/Proto.hpp \
-		$$(shell ls include/ProtoTransformer/detail/SessionManagers/*) \
-		$$(shell ls include/ProtoTransformer/detail/Wrappers/*) \
+		include/ProtoTransformer/detail/SessionManagers/* \
+		include/ProtoTransformer/detail/Wrappers/* \
 		$$(call GetExampleFeatures,$$(@D),hpp) \
 		$$(call GetExampleDeps,$$(@D))
 	$(ProvideObj)
 
 %.oClient:	%.cpp \
+		$$(call Headers,include/TricksAndThings/ParamPackManip/) \
+		$$(call Headers,include/TricksAndThings/SignatureManip/) \
+		$$(call Headers,include/TricksAndThings/Tools/) \
 		include/ProtoTransformer/Client.hpp \
 		include/ProtoTransformer/detail/Client.tcc \
-		include/TricksAndThings/ParamPackManip/* \
-		include/TricksAndThings/ParamPackManip/Binders/* \
 		$$(@D)/Proto.hpp \
 		$$(call GetExampleFeatures,$$(@D),hpp) \
 		$$(call GetExampleDeps,$$(@D))

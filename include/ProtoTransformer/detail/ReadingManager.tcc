@@ -1,4 +1,4 @@
-#include "../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
+#include "../../TricksAndThings/SignatureManip/filteringAdapter.hpp"
 
 namespace ProtoTransformer
 {

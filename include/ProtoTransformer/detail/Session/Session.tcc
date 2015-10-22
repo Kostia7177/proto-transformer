@@ -1,5 +1,5 @@
-#include "../../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
 #include "../JustSize.hpp"
+#include "../../../TricksAndThings/SignatureManip/filteringAdapter.hpp"
 
 namespace ProtoTransformer
 {
@@ -62,7 +62,7 @@ void Session<Cfg>::readRequestSw(
                                       {
                                         if (administration.exitManager.sessionWasRemoved()) { return; }
                                         processRequest(payload, exitDetector);
-                                      } ,
+                                      },
                                       sessionContext.sessionHdr);
 }
 
@@ -91,7 +91,7 @@ void Session<Cfg>::readRequestSw(
                     requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr) / sizeof(typename Cfg::RequestDataRepr));
 
                     // ...and then read the request itself;
-                    async_read(*ioSocketPtr ,
+                    async_read(*ioSocketPtr,
                                Asio::buffer(requestContext.inDataBuffer),
                                [=] (const Sys::error_code &errorCode,
                                     size_t numOfBytesRecivied)

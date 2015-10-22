@@ -2,7 +2,7 @@
 
 #include "../Tools.hpp"
 #include "../Session/SessionContext.hpp"
-#include "../../../TricksAndThings/ParamPackManip/filteringAdapter.hpp"
+#include "../../../TricksAndThings/SignatureManip/filteringAdapter.hpp"
 #include "../../../TricksAndThings/Tools/GccBug47226Satellite.hpp"
 #include <boost/asio.hpp>
 
