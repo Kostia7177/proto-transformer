@@ -1,7 +1,7 @@
 #pragma once
 /*
     Easy way to make your own application-layer protocol. Just play with it like with a robot-transformer.
-    Copyright (C) 2014  Konstantin U. Zozoulia
+    Copyright (C) 2014, 2015 Konstantin U. Zozoulia
 
     candid.71 -at- mail -dot- ru
 
@@ -19,13 +19,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "detail/Configurator/SettingSelector.hpp"
+#include "DefaultSettingsList.hpp"
+#include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
 
 namespace ProtoTransformer
 {
 
-template<class... Params> struct Proto : public SettingSelector<0, Params...> {};
+template<class... Params>
+using Proto = TricksAndThings::EasyTraits<DefaultSettingsList, 0, Params...>;
 
-template<template<class, class> class T, class Policy> struct UsePolicy : public T<Policy, DefaultSettingsList::Type> {};
+template<template<class, class> class PolicyWrapper, class Policy>
+using UsePolicy = TricksAndThings::ReplaceDefaultSettingWithPolicy<DefaultSettingsList, PolicyWrapper, Policy>;
 
 }

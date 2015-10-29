@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../TricksAndThings/ThreadPool/ThreadPool.hpp"
 #include "../TricksAndThings/ParamPackManip/Params2TypesHierarchy.hpp"
 #include "detail/Configurator/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
@@ -10,6 +9,7 @@
 #include "detail/StopServerOnSigint.hpp"
 #include "detail/JustSize.hpp"
 #include "detail/ReadingManager.hpp"
+#include "../TricksAndThings/ThreadPool/ThreadPool.hpp"
 #include "detail/Loggers/Syslog.hpp"
 #include "detail/Loggers/Stderr.hpp"
 

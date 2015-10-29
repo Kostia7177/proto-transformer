@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Tools.hpp"
+#include "../../../TricksAndThings/Tools/Int2Type.hpp"
 #include <memory>
 
 namespace ProtoTransformer

@@ -20,7 +20,8 @@
 */
 
 #include "detail/Session/Session.hpp"
-#include "detail/Configurator/SettingSelector.hpp"
+#include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
+#include "DefaultSettingsList.hpp"
 
 namespace ProtoTransformer
 {
@@ -59,7 +60,7 @@ class Server
     NonProtoParamsChecker<Params...> paramsAreOk;
 
     struct Cfg
-        : SettingSelector<ParamProto::selectorIdx + 1, Params...>,
+        : TricksAndThings::EasyTraits<DefaultSettingsList, ParamProto::selectorIdx + 1, Params...>,
           public ParamProto
     {   // merging Proto with other parameters
     };

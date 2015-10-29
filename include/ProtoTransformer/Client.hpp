@@ -26,7 +26,8 @@
 #include "detail/BindArgsWithProxies.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/Wrappers/ForDataHeader.hpp"
-#include "detail/Configurator/SettingSelector.hpp"
+#include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
+#include "DefaultSettingsList.hpp"
 
 namespace ProtoTransformer
 {
@@ -36,7 +37,7 @@ class Client
 {
     struct Cfg
         : public ParamProto,
-          SettingSelector<ParamProto::selectorIdx + 1, Params...>
+          TricksAndThings::EasyTraits<DefaultSettingsList, ParamProto::selectorIdx + 1, Params...>
     {
     };
     typedef typename Cfg::AnswerHdr::Itself AnswerHdr;
