@@ -19,13 +19,17 @@ Proto-Transformer is a header library, so,
   
 (or leave it not set, then it will be /usr/local/include/) and do
 
+```shell
   make install
+```
   
 command - it will place all headers to $DESTDIR.
 
 You can say also
 
+```shell
   make all
+```
   
 - and then all examples will be compiled.
 
