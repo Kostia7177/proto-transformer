@@ -31,7 +31,7 @@ You can say also
   make all
 ```
   
-- and then all examples will be compiled.
+and then all examples will be compiled.
 
 ###How to use.
 
