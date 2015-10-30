@@ -11,7 +11,7 @@ Boost threadpool: http://threadpool.sourceforge.net/ .
 
 ###Installation
 
-Proto-Transformer is a header library, so,
+ProtoTransformer is a header library, so,
 
 ```shell
   export DESTDIR=/to/where/do/you/want/to/install/
@@ -25,7 +25,7 @@ Proto-Transformer is a header library, so,
   
 command - it will place all headers to $DESTDIR.
 
-You can say also
+You can also say
 
 ```shell
   make all
