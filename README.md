@@ -11,9 +11,20 @@ Boost threadpool: http://threadpool.sourceforge.net/ .
 
 ###Installation
 
-Simply copy to /usr/local/include, for example.
+Proto-Transformer is a header library, so,
 
-cp -R include/ProtoTransformer/ /usr/local/include/
+  export DESTDIR=/to/where/do/you/want/to/install/
+  
+(or leave it not set, then it will be /usr/local/include/) and do
+
+  make install
+  
+command - it will place all headers to $DESTDIR
+You can say
+
+  make all
+  
+and then all examples will be compiled.
 
 ###How to use.
 
