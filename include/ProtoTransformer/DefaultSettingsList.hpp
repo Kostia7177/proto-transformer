@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../TricksAndThings/ParamPackManip/Params2TypesHierarchy.hpp"
+#include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
 #include "detail/Configurator/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
 #include "detail/AnswerCases.hpp"
@@ -21,7 +21,7 @@ namespace ProtoTransformer
 // project. So that it is why it moved out from 'detail'.
 // Be carefull, avoid the dumb mistakes (to forget something,
 // for example) - hundred-screen-long error messages are guaranteed!
-typedef TricksAndThings::Params2TypesHierarchy
+typedef TricksAndThings::DefaultSettingsBox
     <
         // proto describing components:
         //  -- whole session (surprise! :) )

@@ -20,7 +20,6 @@
 */
 
 #include "detail/Session/Session.hpp"
-#include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
 #include "DefaultSettingsList.hpp"
 
 namespace ProtoTransformer
