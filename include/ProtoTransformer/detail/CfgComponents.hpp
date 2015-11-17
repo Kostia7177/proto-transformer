@@ -1,10 +1,10 @@
 #pragma once
 
 #include <string.h>
-#include "../Wrappers/ForDataHeader.hpp"
-#include "../Wrappers/ForThreadPool.hpp"
-#include "../Wrappers/ForLogger.hpp"
-#include "../Wrappers/ForTimer.hpp"
+#include "Wrappers/ForDataHeader.hpp"
+#include "Wrappers/ForThreadPool.hpp"
+#include "Wrappers/ForLogger.hpp"
+#include "Wrappers/ForTimer.hpp"
 
 namespace ProtoTransformer
 {

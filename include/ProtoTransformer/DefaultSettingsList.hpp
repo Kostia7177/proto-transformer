@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
-#include "detail/Configurator/CfgComponents.hpp"
+#include "detail/CfgComponents.hpp"
 #include "detail/ReadUntilNull.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/SessionManagers/WithMap.hpp"
@@ -21,7 +21,8 @@ namespace ProtoTransformer
 // project. So that it is why it moved out from 'detail'.
 // Be carefull, avoid the dumb mistakes (to forget something,
 // for example) - hundred-screen-long error messages are guaranteed!
-typedef TricksAndThings::DefaultSettingsBox
+namespace Tat = TricksAndThings;
+typedef Tat::DefaultSettingsBox
     <
         // proto describing components:
         //  -- whole session (surprise! :) )
@@ -84,9 +85,12 @@ typedef TricksAndThings::DefaultSettingsBox
                                         // terminates them on server's exit; see
                                         // SessionManagers/WithMap.hpp;
         //
-        ServerThreadPoolIs<TricksAndThings
-                           ::ThreadPool<TricksAndThings
-                                        ::shutdownImmediate>>,
+        ServerThreadPoolIs<Tat::ThreadPool
+                            <
+                                Tat::UseThreadPoolPolicy
+                                    <Tat::ShutdownPolicyIs,
+                                     Int2Type<Tat::shutdownImmediate>>
+                            >>,
         SessionThreadPoolIs<NullType>,
         LoggerIs<NullType>,
         RequestTimeoutIs<NullType>,
