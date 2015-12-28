@@ -36,8 +36,8 @@ template<class ParamProto, class... Params>
 class Client
 {
     struct Cfg
-        : public ParamProto,
-          TricksAndThings::EasyTraits<DefaultSettingsList, ParamProto::selectorIdx + 1, Params...>
+        : ParamProto,
+          TricksAndThings::EasyTraits<DefaultSettingsList, Int2Type<ParamProto::Domain::value + 1>, Params...>
     {
     };
     typedef typename Cfg::AnswerHdr::Itself AnswerHdr;

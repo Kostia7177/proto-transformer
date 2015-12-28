@@ -47,7 +47,7 @@ class Server
     static_assert(!(requestHdrNotDefined && requestCompletionNotDefined),
                   "One (and strictly one) of either request header or request "
                   "completion function must be defined. ");
-    static_assert(ParamProto::selectorIdx == 0,
+    static_assert(ParamProto::Domain::value == 0,
                   "First template parameter must be a proto here! ");
     static_assert(!(ParamProto::serverSendsAnswer == atLeastHdr
                     && std::is_same<typename ParamProto::AnswerHdr, NullType>::value),
@@ -59,7 +59,7 @@ class Server
     NonProtoParamsChecker<Params...> paramsAreOk;
 
     struct Cfg
-        : TricksAndThings::EasyTraits<DefaultSettingsList, ParamProto::selectorIdx + 1, Params...>,
+        : TricksAndThings::EasyTraits<DefaultSettingsList, Int2Type<ParamProto::Domain::value + 1>, Params...>,
           public ParamProto
     {   // merging Proto with other parameters
     };

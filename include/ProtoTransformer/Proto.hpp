@@ -26,7 +26,7 @@ namespace ProtoTransformer
 {
 
 template<class... Params>
-using Proto = TricksAndThings::EasyTraits<DefaultSettingsList, 0, Params...>;
+using Proto = TricksAndThings::EasyTraits<DefaultSettingsList, Int2Type<0>, Params...>;
 
 template<template<class, class> class PolicyWrapper, class Policy>
 using UsePolicy = TricksAndThings::ReplaceDefaultSettingWithPolicy<DefaultSettingsList, PolicyWrapper, Policy>;
