@@ -75,6 +75,7 @@ class Server
     typename Cfg::Logger logger;
     typedef typename Cfg::ServerSpace ServerSpace;
     ServerSpace *serverSpace;
+    typename Cfg::TaskManager taskManager;
 
     typedef typename Cfg::SessionManager::template Itself<Session<Cfg>> SessionManager;
     typedef std::shared_ptr<SessionManager> SessionManagerPtr;
@@ -96,6 +97,7 @@ class Server
     Server(size_t port, size_t numOfWorkers, ServerSpace *inServerSpace = 0)
         : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
           serverSpace(inServerSpace),
+          taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)),
           sigHandler(ioService){}
     template<class F> Server(size_t port, F, ServerSpace * = 0);
     ~Server(){}

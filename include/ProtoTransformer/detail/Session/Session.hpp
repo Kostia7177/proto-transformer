@@ -81,9 +81,14 @@ class Session
 
     public:
 
-    Session(Cfg cfg, Asio::io_service &ioService, SocketPtr socketPtrArg, ServerSpace *serverSpaceArg)
+    Session(
+        Cfg cfg,
+        Asio::io_service &ioService,
+        SocketPtr socketPtrArg,
+        ServerSpace *serverSpaceArg,
+        typename Cfg::TaskManager &managerRef)
         : serverSpace(serverSpaceArg),
-          administration(requestContext.inDataBuffer),
+          administration(requestContext.inDataBuffer, managerRef),
           ioSocketPtr(socketPtrArg),
           readingTimeout(ioService){}
     ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }

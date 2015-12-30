@@ -50,7 +50,11 @@ void Server<Proto, Params...>::startAccepting(
                           {
                             if (!errorCode)
                             {
-                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg, ioService, newSocketPtr, serverSpace);
+                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg,
+                                                                                                          ioService,
+                                                                                                          newSocketPtr,
+                                                                                                          serverSpace,
+                                                                                                          taskManager);
                                 sessionManagerPtr->startSession(newSession, payload);
                                 logger.itself(logger.itself.debug(), "New session %zx started; ", newSession.get());
                                 startAccepting(cfg, payload, sessionManagerPtr);
@@ -72,6 +76,7 @@ Server<ParamProto, Params...>::Server(
     : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
       workingThreads(getNumOfThreads(Cfg::numOfWorkers)),
       serverSpace(inServerSpace),
+      taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)),
       sigHandler(ioService)
 {
     accept(payloadCode);

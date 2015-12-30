@@ -22,12 +22,15 @@ struct SessionAdministration
 
     typedef typename Cfg::SessionManager::template Reference<S> ExitManager;
     ExitManager exitManager;
-    typename Cfg::TaskManager taskManager;
+    typedef  typename Cfg::TaskManager TaskManager;
+    TaskManager &taskManager;
 
     template<class B>
-    SessionAdministration(B &buffer)
+    SessionAdministration(
+        B &buffer,
+        TaskManager &managerRef)
         : readingManager(buffer),
-          taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)){}
+          taskManager(managerRef){}
 };
 
 }
