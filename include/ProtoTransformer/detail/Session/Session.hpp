@@ -27,11 +27,11 @@ class Session
     Administration administration;
     typename Administration::RequestCompletion requestCompletion;
 
-    typename Cfg::Logger::Itself logger;
+    typename Cfg::Logger logger;
 
     SocketPtr ioSocketPtr;
 
-    typename Cfg::RequestTimeout::TimerItself readingTimeout;
+    typename Cfg::RequestTimeout readingTimeout;
 
     Session(const Session &);
     Session &operator= (const Session &);

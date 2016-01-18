@@ -56,12 +56,12 @@ void Server<Proto, Params...>::startAccepting(
                                                                                                           serverSpace,
                                                                                                           taskManager);
                                 sessionManagerPtr->startSession(newSession, payload);
-                                logger.itself(logger.itself.debug(), "New session %zx started; ", newSession.get());
+                                logger(logger.debug(), "New session %zx started; ", newSession.get());
                                 startAccepting(cfg, payload, sessionManagerPtr);
                             }
                             else
                             {
-                                logger.itself(logger.itself.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
+                                logger(logger.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
                                 stop();
                             }
                           });

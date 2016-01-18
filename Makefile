@@ -47,7 +47,7 @@ CFLAGS += -g -std=c++11 -Iinclude -Wno-varargs
 		include/ProtoTransformer/detail/Session/* \
 		$$(@D)/Proto.hpp \
 		include/ProtoTransformer/detail/SessionManagers/* \
-		include/ProtoTransformer/detail/Wrappers/* \
+		include/ProtoTransformer/detail/CfgComponents/* \
 		$$(call GetExampleFeatures,$$(@D),hpp) \
 		$$(call GetExampleDeps,$$(@D))
 	$(ProvideObj)

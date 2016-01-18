@@ -1,20 +1,24 @@
 #pragma once
 
 #include "../../TricksAndThings/SignatureManip/detail/Binders/BindArgs.hpp"
-#include "Wrappers/ForDataHeader.hpp"
 #include "JustSize.hpp"
+namespace ProtoTransformer { namespace detail
+{
+template<typename> struct DataHeaderWrapper {};
+} }
 
 namespace TricksAndThings
 {
+namespace Ptd = ProtoTransformer::detail;
 
 template<int idx, typename T>
-struct BindArgs<idx, ProtoTransformer::Wrappers::ForDataHeader<T &>>
+struct BindArgs<idx, Ptd::DataHeaderWrapper<T &>>
     : BindArgs<idx, typename T::Itself &>
 {
 };
 
 template<int idx, typename T>
-struct BindArgs<idx, ProtoTransformer::Wrappers::ForDataHeader<T *>>
+struct BindArgs<idx, Ptd::DataHeaderWrapper<T *>>
     : BindArgs<idx, typename T::Itself *>
 {
 };
@@ -31,13 +35,13 @@ struct Proxy4JustSize
 };
 
 template<int idx>
-struct BindArgs<idx, ProtoTransformer::Wrappers::ForDataHeader<JustSize &>>
+struct BindArgs<idx, Ptd::DataHeaderWrapper<JustSize &>>
     : Proxy4JustSize<idx, JustSize::Itself &>
 {
 };
 
 template<int idx>
-struct BindArgs<idx, ProtoTransformer::Wrappers::ForDataHeader<JustSize *>>
+struct BindArgs<idx, Ptd::DataHeaderWrapper<JustSize *>>
     : Proxy4JustSize<idx, JustSize::Itself *>
 {
 };

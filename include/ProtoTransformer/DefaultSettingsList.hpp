@@ -1,7 +1,11 @@
 #pragma once
 
 #include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
-#include "detail/CfgComponents.hpp"
+#include "detail/CfgComponents/AnyTriftleIs.hpp"
+#include "detail/CfgComponents/LoggerIs.hpp"
+#include "detail/CfgComponents/RequestHdrIs.hpp"
+#include "detail/CfgComponents/RequestTimeoutIs.hpp"
+#include "detail/CfgComponents/SessionThreadPoolIs.hpp"
 #include "detail/ReadUntilNull.hpp"
 #include "detail/AnswerCases.hpp"
 #include "detail/SessionManagers/WithMap.hpp"

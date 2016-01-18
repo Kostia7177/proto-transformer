@@ -1,24 +1,21 @@
 #pragma once
 
 #include "../Tools.hpp"
-#include <stdarg.h>
 
 namespace ProtoTransformer
 {
-namespace Wrappers
-{
 
-template<class T>
-struct ForLogger
+template<class T, class Base = NullType>
+struct LoggerIs : virtual Base
 {
-    typedef T Itself;
-    Itself itself;
+    typedef T Logger;
+    enum { proto = 0 };
 };
 
-template<>
-struct ForLogger<NullType>
+template<class Base>
+struct LoggerIs<NullType, Base> : virtual Base
 {
-    struct Itself
+    struct Logger
     {
         void operator()(int, const char *, ...){}
         int payloadCrached()    { return 0; }
@@ -26,8 +23,7 @@ struct ForLogger<NullType>
         int debug()             { return 0; }
     };
 
-    Itself itself;
+    enum { proto = 0 };
 };
 
-}
 }

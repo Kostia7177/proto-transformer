@@ -1,16 +1,14 @@
 #pragma once
 
-#include <string.h>
-#include "Wrappers/ForDataHeader.hpp"
-#include "Wrappers/ForThreadPool.hpp"
-#include "Wrappers/ForLogger.hpp"
-#include "Wrappers/ForTimer.hpp"
+#include "RequestHdrIs.hpp"
+#include "RequestTimeoutIs.hpp"
+#include <type_traits>
 
 namespace ProtoTransformer
 {
 
 template<class T, class Base = NullType>
-struct SessionHdrIs : virtual public Base
+struct SessionHdrIs : virtual Base
 {
     static_assert(IsTransferable<T>::value == true
                   || std::is_same<T, NullType>::value == true,
@@ -20,35 +18,28 @@ struct SessionHdrIs : virtual public Base
 };
 
 template<typename T, class Base = NullType>
-struct SessionSpecificIs : virtual public Base
+struct SessionSpecificIs : virtual Base
 {
     typedef T SessionSpecific;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct InitSessionSpecificIs : virtual public Base
+struct InitSessionSpecificIs : virtual Base
 {
     typedef T InitSessionSpecific;
     enum { proto =  0};
 };
 
-template<class T, class Base = NullType>
-struct RequestHdrIs : virtual public Base
-{
-    typedef typename Wrappers::ForDataHeader<T>::Type RequestHdr;
-    enum { proto = 1 };
-};
-
 template<typename T, class Base = NullType>
-struct RequestCompletionIs : virtual public Base
+struct RequestCompletionIs : virtual Base
 {
     typedef T RequestCompletion;
     enum { proto = 1 };
 };
 
 template<typename T, class Base = NullType>
-struct RequestDataReprIs : virtual public Base
+struct RequestDataReprIs : virtual Base
 {
     typedef T RequestDataRepr;
     typedef std::vector<RequestDataRepr> RequestData;
@@ -56,35 +47,38 @@ struct RequestDataReprIs : virtual public Base
 };
 
 template<typename T, class Base = NullType>
-struct AnswerHdrIs : virtual public Base
+struct AnswerHdrIs : virtual Base
 {
-    typedef typename Wrappers::ForDataHeader<T>::Type AnswerHdr;
+    typedef typename RequestHdrIs<T, Base>  // request and answer header's wrappers are
+                                            // seem to be the same, so let's reuse the
+                                            // request header's wrapper;
+                     ::RequestHdr AnswerHdr;
     enum { proto = 1 };
 };
 
 template<class T, class Base = NullType>
-struct ServerSpaceIs : virtual public Base
+struct ServerSpaceIs : virtual Base
 {
     typedef T ServerSpace;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct ClientGlobalSpaceIs : virtual public Base
+struct ClientGlobalSpaceIs : virtual Base
 {
     typedef T ClientGlobalSpace;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct AnswerCompletionIs : virtual public Base
+struct AnswerCompletionIs : virtual Base
 {
     typedef T AnswerCompletion;
     enum { proto = 1 };
 };
 
 template<typename T, class Base = NullType>
-struct AnswerDataReprIs : virtual public Base
+struct AnswerDataReprIs : virtual Base
 {
     typedef T AnswerDataRepr;
     typedef std::vector<AnswerDataRepr> AnswerData;
@@ -92,78 +86,59 @@ struct AnswerDataReprIs : virtual public Base
 };
 
 template<class T, class Base = NullType>
-struct ServerSendsAnswer : virtual public Base
+struct ServerSendsAnswer : virtual Base
 {
     enum { proto = 1 };
     static const int serverSendsAnswer = T::value;
 };
 
 template<class T, class Base = NullType>
-struct SessionManagerIs : virtual public Base
+struct SessionManagerIs : virtual Base
 {
     typedef T SessionManager;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct ServerThreadPoolIs : virtual public Base
+struct ServerThreadPoolIs : virtual Base
 {
     typedef T ServerThreadPool;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct SessionThreadPoolIs : virtual public Base
-{
-    typedef T SessionThreadPool;
-    typedef Wrappers::ForThreadPool<SessionThreadPool> TaskManager;
-    enum { proto = 0 };
-};
-
-template<class T, class Base = NullType>
-struct ReadingManagerIs : virtual public Base
+struct ReadingManagerIs : virtual Base
 {
     typedef T ReadingManager;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct NumOfWorkersIs : virtual public Base
+struct NumOfWorkersIs : virtual Base
 {
     static const unsigned int numOfWorkers = T::value;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct ParallelRequestsPerSessionIs : virtual public Base
+struct ParallelRequestsPerSessionIs : virtual Base
 {
     static const unsigned int numOfRequestsPerSession = T::value;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct LoggerIs : virtual public Base
+struct AnswerTimeoutIs : virtual Base
 {
-    typedef Wrappers::ForLogger<T> Logger;
-    enum { proto = 0 };
-};
-
-template<class T , class Base = NullType>
-struct RequestTimeoutIs : virtual public Base
-{
-    typedef typename Wrappers::ForTimer<T> RequestTimeout;
+    typedef typename RequestTimeoutIs<T, Base>  // wrappers for request and answer timeout
+                                                // are seem to be the same, so let's reuse
+                                                // the request timeout wrapper;
+                     ::RequestTimeout AnswerTimeout;
     enum { proto = 0 };
 };
 
 template<class T, class Base = NullType>
-struct AnswerTimeoutIs : virtual public Base
-{
-    typedef typename Wrappers::ForTimer<T> AnswerTimeout;
-    enum { proto = 0 };
-};
-
-template<class T, class Base = NullType>
-struct SigintHandlerIs : virtual public Base
+struct SigintHandlerIs : virtual Base
 {
     typedef T SigintHandler;
     enum { proto = 0 };

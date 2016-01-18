@@ -25,7 +25,6 @@
 #include "../TricksAndThings/ParamPackManip/Params2Hierarchy.hpp"
 #include "detail/BindArgsWithProxies.hpp"
 #include "detail/AnswerCases.hpp"
-#include "detail/Wrappers/ForDataHeader.hpp"
 #include "../TricksAndThings/EasyTraits/EasyTraits.hpp"
 #include "DefaultSettingsList.hpp"
 
@@ -63,9 +62,9 @@ class Client
 
     TricksAndThings::Params2Hierarchy
         <TricksAndThings::BindArgs,
-            Wrappers::ForDataHeader<typename Cfg::RequestHdr &>,
+            detail::DataHeaderWrapper<typename Cfg::RequestHdr &>,
             const RequestData &,
-            Wrappers::ForDataHeader<typename Cfg::AnswerHdr *>
+            detail::DataHeaderWrapper<typename Cfg::AnswerHdr *>
         > requestParams;
 
     enum { requestHdrIdx = 1, dataIdx, answerHdrIdx };
@@ -82,7 +81,7 @@ class Client
                      template Itself<AnswerCompletion,
                                      typename Cfg::AnswerDataRepr> AnswerReadingManager;
     AnswerReadingManager readingManager;
-    typename Cfg::AnswerTimeout::TimerItself readingTimer;
+    typename Cfg::AnswerTimeout readingTimer;
 
     template<class T>
     void writeSw(const T &hdr)      { write(ioSocket, Asio::buffer(&hdr, sizeof(hdr))); }
