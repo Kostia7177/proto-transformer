@@ -36,41 +36,53 @@ class Session
     Session(const Session &);
     Session &operator= (const Session &);
 
-    // session keeper; shared-pointer-based exit detector.
+    typedef typename Cfg::SessionManager::template ExitDetector<Session> ExitDetector;
+    // payload container plus session keeper
+    // (shared-pointer-based exit detector);
     // will be passed by copying from one phase to another
     // until one of the phases will return (due to error
     // or at the exit-condition, which is 0 returned by
     // payload)
-    typedef std::shared_ptr<typename Cfg::SessionManager::template ExitDetector<Session>> ExitDetectorPtr;
+    // 'F' is a payload code that will be called inside
+    // 'processRequest' (we cannot include it into 'Cfg')
+    template<class F>
+    struct Payload
+    {
+        ExitDetector exitDetector;
+        F itself;
+        Payload(F f, std::shared_ptr<Session> s)
+            : exitDetector(s), itself(f){}
+    };
+
+    template<class F>
+    using PayloadPtr = std::shared_ptr<Payload<F>>;
 
     // the following is a working body of a session.
     // first 1 or 2 parameters of each 'Sw'-marked function
     // provide such a compile-time overload-based Switch
     // between different possible configuration variants.
-    // 'F' is a payload code that will be called inside
-    // 'processRequest' (we cannot include it into 'Cfg')
     //
     // opening a new session
     template<typename SessionHdr,
-             class F> void runSw(const SessionHdr &, F, ExitDetectorPtr);
-    template<class F> void runSw(const NullType &, F, ExitDetectorPtr);
+             class F> void runSw(const SessionHdr &, PayloadPtr<F>);
+    template<class F> void runSw(const NullType &, PayloadPtr<F>);
     //
     // request processing phases (*)
     template<class RequestCompletion,
-             class F> void readRequestSw(const RequestCompletion &, F, ExitDetectorPtr);
-    template<class F> void readRequestSw(const NullType &, F, ExitDetectorPtr);
+             class F> void readRequestSw(const RequestCompletion &, PayloadPtr<F>);
+    template<class F> void readRequestSw(const NullType &, PayloadPtr<F>);
     //
-    template<class F> void processRequest(F, ExitDetectorPtr);
+    template<class F> void processRequest(PayloadPtr<F>);
     //
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NoAnswerAtAll &, F, ExitDetectorPtr);
+             class F> void writeAnswerSw(const AnswerHdr &, const NoAnswerAtAll &, PayloadPtr<F>);
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const AtLeastHeader &, F, ExitDetectorPtr);
+             class F> void writeAnswerSw(const AnswerHdr &, const AtLeastHeader &, PayloadPtr<F>);
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NothingIfNoData &, F, ExitDetectorPtr);
-    template<class F> void writeAnswerSw(const NullType &, const NothingIfNoData &, F, ExitDetectorPtr);
+             class F> void writeAnswerSw(const AnswerHdr &, const NothingIfNoData &, PayloadPtr<F>);
+    template<class F> void writeAnswerSw(const NullType &, const NothingIfNoData &, PayloadPtr<F>);
     //
-    template<class F> void writeAnswerData(F, ExitDetectorPtr);
+    template<class F> void writeAnswerData(PayloadPtr<F>);
     // ...and so on - go to a new request (*);
 
     template<class InitSessionSpecific>

@@ -8,16 +8,14 @@ template<class Cfg>
 template<class F>
 void Session<Cfg>::run(F payload)
 {
-    typedef typename Cfg::SessionManager::template ExitDetector<Session> ExitDetector;
-    runSw(sessionContext.sessionHdr, payload, std::shared_ptr<ExitDetector>(new ExitDetector(this->shared_from_this())));
+    runSw(sessionContext.sessionHdr, std::shared_ptr<Payload<F>>(new Payload<F>(payload, this->shared_from_this())));
 }
 
 template<class Cfg>
 template<typename SessionHdr, class F>
 void Session<Cfg>::runSw(
     const SessionHdr &, // session header specified - so read it first;
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     async_read(*ioSocketPtr,
                Asio::buffer(&sessionContext.sessionHdr, sizeof(sessionContext.sessionHdr)),
@@ -32,7 +30,7 @@ void Session<Cfg>::runSw(
                         return;
                     }
                     initSessionSpecificSw(sessionContext.initSessionSpecific);
-                    readRequestSw(requestCompletion, payload, exitDetector);
+                    readRequestSw(requestCompletion, payloadPtr);
                });
 }
 
@@ -41,11 +39,10 @@ template<class F>
 void Session<Cfg>::runSw(
     const NullType &,   // no session header specified - start reading
                         // the requests themselves immediately;
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     initSessionSpecificSw(sessionContext.initSessionSpecific);
-    readRequestSw(requestCompletion, payload, exitDetector);
+    readRequestSw(requestCompletion, payloadPtr);
 }
 
 template<class Cfg>
@@ -53,15 +50,14 @@ template<class RequestCompletion, class F>
 void Session<Cfg>::readRequestSw(
     const RequestCompletion &,  // completion function instead of
                                 // request header specified;
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     setTimer();
     administration.readingManager.get(*ioSocketPtr,
                                       [=]
                                       {
                                         if (administration.exitManager.sessionWasRemoved()) { return; }
-                                        processRequest(payload, exitDetector);
+                                        processRequest(payloadPtr);
                                       },
                                       sessionContext.sessionHdr);
 }
@@ -70,8 +66,7 @@ template<class Cfg>
 template<class F>
 void Session<Cfg>::readRequestSw(
     const NullType &,   // no reading completion function specified...
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     setTimer();
     // ...so read the header first...
@@ -102,16 +97,14 @@ void Session<Cfg>::readRequestSw(
                                         logger(logger.errorOccured(), "Cannot read request data '%s'; ", errorCode.message().c_str());
                                         return;
                                     }
-                                    processRequest(payload, exitDetector);
+                                    processRequest(payloadPtr);
                                });
                });
 }
 
 template<class Cfg>
 template<class F>
-void Session<Cfg>::processRequest(
-    F payload,
-    ExitDetectorPtr exitDetector)
+void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
 {
     cancelTimer();
     requestContext.outDataBuffer.clear();
@@ -122,7 +115,7 @@ void Session<Cfg>::processRequest(
                                             int retCode = 0;
                                             try
                                             {
-                                                ExitDetectorPtr keeper(exitDetector);
+                                                PayloadPtr<F> keeper(payloadPtr);
 
                                                 // no need to pass to a payload:
                                                 // -- request header, if it doesn't contents anything but size of a request -
@@ -146,7 +139,7 @@ void Session<Cfg>::processRequest(
                                                 // now throw out all the NullType-things and call
                                                 // the user's payload code with all that remains;
                                                 retCode = TricksAndThings::
-                                                          filteringAdapter(payload,
+                                                          filteringAdapter(payloadPtr->itself,
                                                                            sessionContext.sessionHdrRO,
                                                                            // turn the invariants to const;
                                                                            static_cast<const typename RequestHdrCorrected::
@@ -175,7 +168,7 @@ void Session<Cfg>::processRequest(
                                          });
 
     if (administration.exitManager.sessionWasRemoved()) { return; }
-    writeAnswerSw(requestContext.answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payload, exitDetector);
+    writeAnswerSw(requestContext.answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payloadPtr);
 }
 
 template<class Cfg>
@@ -183,10 +176,9 @@ template<typename AnswerHdr, class F>
 void Session<Cfg>::writeAnswerSw(
     const AnswerHdr &,
     const NoAnswerAtAll &,
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
-    readRequestSw(requestCompletion, payload, exitDetector); 
+    readRequestSw(requestCompletion, payloadPtr) ;
 }
 
 template<class Cfg>
@@ -194,8 +186,7 @@ template<typename AnswerHdr, class F>
 void Session<Cfg>::writeAnswerSw(
     const AnswerHdr &,
     const AtLeastHeader &,
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size() * sizeof(typename Cfg::AnswerDataRepr), requestContext.answerHdr);
 
@@ -209,7 +200,7 @@ void Session<Cfg>::writeAnswerSw(
                         logger(logger.errorOccured(), "Cannot write answer header '%s'; ", errorCode.message().c_str());
                         return;
                     }
-                    writeAnswerData(payload, exitDetector);
+                    writeAnswerData(payloadPtr);
                 });
 }
 
@@ -218,14 +209,13 @@ template<typename AnswerHdr, class F>
 void Session<Cfg>::writeAnswerSw(
     const AnswerHdr &,
     const NothingIfNoData &,
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
     if (requestContext.outDataBuffer.empty())
     {
-        readRequestSw(requestCompletion, payload, exitDetector);
+        readRequestSw(requestCompletion, payloadPtr);
     }
-    else { writeAnswerSw(requestContext.answerHdr, AtLeastHeader(), payload, exitDetector); }
+    else { writeAnswerSw(requestContext.answerHdr, AtLeastHeader(), payloadPtr); }
 }
 
 template<class Cfg>
@@ -233,21 +223,18 @@ template<class F>
 void Session<Cfg>::writeAnswerSw(
     const NullType &,
     const NothingIfNoData &,
-    F payload,
-    ExitDetectorPtr exitDetector)
+    PayloadPtr<F> payloadPtr)
 {
-    writeAnswerData(payload, exitDetector);
+    writeAnswerData(payloadPtr);
 }
 
 template<class Cfg>
 template<class F>
-void Session<Cfg>::writeAnswerData(
-    F payload,
-    ExitDetectorPtr exitDetector)
+void Session<Cfg>::writeAnswerData(PayloadPtr<F> payloadPtr)
 {
     if (!requestContext.outDataBuffer.size())
     {
-        readRequestSw(requestCompletion, payload, exitDetector);
+        readRequestSw(requestCompletion, payloadPtr);
     }
     else
     {
@@ -261,7 +248,7 @@ void Session<Cfg>::writeAnswerData(
                             logger(logger.errorOccured(), "Cannot write answer data '%s'; ", errorCode.message().c_str());
                             return;
                         }
-                        readRequestSw(requestCompletion, payload, exitDetector);
+                        readRequestSw(requestCompletion, payloadPtr);
                 });
     }
 }
@@ -273,6 +260,7 @@ void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
     TricksAndThings::
     filteringAdapter(f, static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr), sessionContext.sessionSpecific);
 }
+
 template<class Cfg>
 void Session<Cfg>::setTimer()
 {
