@@ -11,7 +11,8 @@ typedef std::shared_ptr<Socket> SocketPtr;
 
 template<class Cfg>
 class Session
-    : public std::enable_shared_from_this<Session<Cfg>>
+    : public std::enable_shared_from_this<Session<Cfg>>,
+      public Asio::coroutine
 {   // every user's connection will be served by
     // an instance of this 'Session' class;
     //
@@ -32,6 +33,7 @@ class Session
     SocketPtr ioSocketPtr;
 
     typename Cfg::RequestTimeout readingTimeout;
+    bool goOn;
 
     Session(const Session &);
     Session &operator= (const Session &);
@@ -57,32 +59,93 @@ class Session
     template<class F>
     using PayloadPtr = std::shared_ptr<Payload<F>>;
 
-    // the following is a working body of a session.
+    enum Phase
+    {
+        unspecified,
+        readingSessionHdr,
+        readingHdr,
+        readingData,
+        writingHdr,
+        writingData
+    };
+
+    using ErrorMessages = std::map<Phase, std::string>;
+    static  ErrorMessages errorMessage;
+
+    template<class F>
+    struct Tappet
+    {
+        const PayloadPtr<F> payloadPtr;
+
+        private:
+        Phase phase;
+        public:
+
+        Tappet(F f, Session *s)
+            : payloadPtr(std::make_shared<Payload<F>>(f, s->shared_from_this())),
+              phase(unspecified)
+        { payloadPtr->exitDetector.getSession().goOn = true; }
+
+        void operator()(
+            Sys::error_code errorCode = Sys::error_code(),
+            size_t = 0)
+        {
+            Session &session = payloadPtr->exitDetector.getSession();
+
+            if (session.administration.exitManager.sessionWasRemoved())
+            {
+                session.goOn = false;
+            }
+
+            if (errorCode)
+            {
+                session.goOn = false;
+                typename Cfg::Logger &logger = session.logger;
+                logger(logger.errorOccured(), "%s '%s';", session.errorMessage[phase].c_str(),errorCode.message().c_str());
+            }
+            kickWorkflow();
+        }
+
+        void kickWorkflow()
+        { payloadPtr->exitDetector.getSession().workflow(*this); }
+
+        const Tappet &atPhase(Phase p){ return phase = p, *this; }
+    };
+
+    // here is a working body of a session;
+    template<class F> void workflow(Tappet<F>);
+
+    // the following are phases of a working body.
     // first 1 or 2 parameters of each 'Sw'-marked function
     // provide such a compile-time overload-based Switch
     // between different possible configuration variants.
     //
     // opening a new session
     template<typename SessionHdr,
-             class F> void runSw(const SessionHdr &, PayloadPtr<F>);
-    template<class F> void runSw(const NullType &, PayloadPtr<F>);
+             class F> void readSessionHdrSw(const SessionHdr &, Tappet<F>);
+    template<class F> void readSessionHdrSw(const NullType &, Tappet<F>);
     //
     // request processing phases (*)
     template<class RequestCompletion,
-             class F> void readRequestSw(const RequestCompletion &, PayloadPtr<F>);
-    template<class F> void readRequestSw(const NullType &, PayloadPtr<F>);
+             class F> void readRequestHdrSw(const RequestCompletion &, Tappet<F>);
+    template<class F> void readRequestHdrSw(const NullType &, Tappet<F>);
+    template<class RequestCompletion,
+             class F> void readRequestDataSw(const RequestCompletion &, Tappet<F>);
+    template<class F> void readRequestDataSw(const NullType &, Tappet<F>);
     //
     template<class F> void processRequest(PayloadPtr<F>);
     //
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NoAnswerAtAll &, PayloadPtr<F>);
+             class F> void writeAnswerHdrSw(const AnswerHdr &, const NoAnswerAtAll &, Tappet<F>);
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const AtLeastHeader &, PayloadPtr<F>);
+             class F> void writeAnswerHdrSw(const AnswerHdr &, const AtLeastHeader &, Tappet<F>);
     template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NothingIfNoData &, PayloadPtr<F>);
-    template<class F> void writeAnswerSw(const NullType &, const NothingIfNoData &, PayloadPtr<F>);
+             class F> void writeAnswerHdrSw(const AnswerHdr &, const NothingIfNoData &, Tappet<F>);
+    template<class F> void writeAnswerHdrSw(const NullType &, const NothingIfNoData &, Tappet<F>);
     //
-    template<class F> void writeAnswerData(PayloadPtr<F>);
+    template<class AnswerMode,
+             class F> void writeAnswerDataSw(const AnswerMode &, Tappet<F>);
+    template<class F> void writeAnswerDataSw(const NoAnswerAtAll &, Tappet<F>);
     // ...and so on - go to a new request (*);
 
     template<class InitSessionSpecific>
@@ -105,9 +168,21 @@ class Session
           readingTimeout(ioService){}
     ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }
 
-    template<class F> void run(F);
+    template<class F> void run(F payload)
+    {workflow(Tappet<F>(payload, this)); }
 
     typename Administration::ExitManager &getManagerReference() { return administration.exitManager; }
+};
+
+template<class Cfg>
+typename Session<Cfg>::ErrorMessages Session<Cfg>::errorMessage
+{
+    { Session<Cfg>::unspecified, "Anything have been failed" },
+    { Session<Cfg>::readingSessionHdr, "Cannot read session header:" },
+    { Session<Cfg>::readingHdr, "Cannot read request header" },
+    { Session<Cfg>::readingData, "Cannot read request data" },
+    { Session<Cfg>::writingHdr, "Cannot write answer header" },
+    { Session<Cfg>::writingData, "Cannot write answer data" }
 };
 
 }

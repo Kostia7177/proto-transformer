@@ -16,6 +16,7 @@ class ExitDetectorBase
     protected:
     ExitDetectorBase(std::shared_ptr<S> arg) : sessionKeeper(arg){}
     virtual ~ExitDetectorBase(){}
+    public:
     S &getSession(){ return *sessionKeeper; }
 };
 

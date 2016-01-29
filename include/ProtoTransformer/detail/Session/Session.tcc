@@ -4,102 +4,114 @@
 namespace ProtoTransformer
 {
 
+#include<boost/asio/yield.hpp>
 template<class Cfg>
 template<class F>
-void Session<Cfg>::run(F payload)
+void Session<Cfg>::workflow(Tappet<F> tappet)
 {
-    runSw(sessionContext.sessionHdr, std::shared_ptr<Payload<F>>(new Payload<F>(payload, this->shared_from_this())));
+    if (goOn)
+    {
+        reenter(this)
+        {
+            yield readSessionHdrSw(sessionContext.sessionHdr,
+                                   tappet.atPhase(readingSessionHdr));
+
+            initSessionSpecificSw(sessionContext.initSessionSpecific);
+
+            do
+            {
+                yield readRequestHdrSw(requestCompletion,
+                                       tappet.atPhase(readingHdr));
+
+                yield readRequestDataSw(requestCompletion,
+                                        tappet.atPhase(readingData));
+
+                processRequest(tappet.payloadPtr);
+
+                typedef Int2Type<Cfg::serverSendsAnswer> AnswerMode;
+                yield writeAnswerHdrSw(requestContext.answerHdr, AnswerMode(),
+                                       tappet.atPhase(writingHdr));
+
+                yield writeAnswerDataSw(AnswerMode(),
+                                        tappet.atPhase(writingData));
+            }
+            while (goOn);
+        }
+    }
 }
+#include<boost/asio/unyield.hpp>
 
 template<class Cfg>
 template<typename SessionHdr, class F>
-void Session<Cfg>::runSw(
+void Session<Cfg>::readSessionHdrSw(
     const SessionHdr &, // session header specified - so read it first;
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
     async_read(*ioSocketPtr,
-               Asio::buffer(&sessionContext.sessionHdr, sizeof(sessionContext.sessionHdr)),
-               [=] (const Sys::error_code &errorCode,
-                    size_t numOfBytes)
-               {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(),
-                               "Cannot read session header: '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
-                    initSessionSpecificSw(sessionContext.initSessionSpecific);
-                    readRequestSw(requestCompletion, payloadPtr);
-               });
+               Asio::buffer(&sessionContext.sessionHdr,
+                            sizeof(sessionContext.sessionHdr)),
+               tappet);
 }
 
 template<class Cfg>
 template<class F>
-void Session<Cfg>::runSw(
+void Session<Cfg>::readSessionHdrSw(
     const NullType &,   // no session header specified - start reading
                         // the requests themselves immediately;
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
-    initSessionSpecificSw(sessionContext.initSessionSpecific);
-    readRequestSw(requestCompletion, payloadPtr);
+    tappet.kickWorkflow();
+}
+template<class Cfg>
+template<class RequestCompletion, class F>
+void Session<Cfg>::readRequestHdrSw(
+    const RequestCompletion &,
+    Tappet<F> tappet)
+{
+    tappet.kickWorkflow();
+}
+
+template<class Cfg>
+template<class F>
+void Session<Cfg>::readRequestHdrSw(
+    const NullType &,   // no reading completion function specified...
+    Tappet<F> tappet)
+{
+    setTimer();
+    // ...so read the header first...
+    async_read(*ioSocketPtr,
+               Asio::buffer(&requestContext.requestHdr,
+                            sizeof(requestContext.requestHdr)),
+               tappet);
 }
 
 template<class Cfg>
 template<class RequestCompletion, class F>
-void Session<Cfg>::readRequestSw(
+void Session<Cfg>::readRequestDataSw(
     const RequestCompletion &,  // completion function instead of
                                 // request header specified;
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
     setTimer();
     administration.readingManager.get(*ioSocketPtr,
-                                      [=]
-                                      {
-                                        if (administration.exitManager.sessionWasRemoved()) { return; }
-                                        processRequest(payloadPtr);
-                                      },
+                                      tappet,
                                       sessionContext.sessionHdr);
 }
 
 template<class Cfg>
 template<class F>
-void Session<Cfg>::readRequestSw(
-    const NullType &,   // no reading completion function specified...
-    PayloadPtr<F> payloadPtr)
+void Session<Cfg>::readRequestDataSw(
+    const NullType &,
+    Tappet<F> tappet)
 {
-    setTimer();
-    // ...so read the header first...
+    // ...and then get a request size from the header...
+    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr)
+                                       / sizeof(typename Cfg::RequestDataRepr));
+
+    // ...and then read the request itself;
     async_read(*ioSocketPtr,
-               Asio::buffer(&requestContext.requestHdr, sizeof(requestContext.requestHdr)),
-               [=] (const Sys::error_code &errorCode,
-                    size_t numOfBytes)
-               {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(), "Cannot read request header '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
-
-                    // ...and then get a request size from the header...
-                    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr) / sizeof(typename Cfg::RequestDataRepr));
-
-                    // ...and then read the request itself;
-                    async_read(*ioSocketPtr,
-                               Asio::buffer(requestContext.inDataBuffer),
-                               [=] (const Sys::error_code &errorCode,
-                                    size_t numOfBytesRecivied)
-                               {
-                                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                                    if (errorCode)
-                                    {
-                                        logger(logger.errorOccured(), "Cannot read request data '%s'; ", errorCode.message().c_str());
-                                        return;
-                                    }
-                                    processRequest(payloadPtr);
-                               });
-               });
+               Asio::buffer(requestContext.inDataBuffer),
+               tappet);
 }
 
 template<class Cfg>
@@ -166,91 +178,82 @@ void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
 
                                             if (!retCode) { ioSocketPtr->shutdown(Socket::shutdown_receive); }
                                          });
-
-    if (administration.exitManager.sessionWasRemoved()) { return; }
-    writeAnswerSw(requestContext.answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payloadPtr);
 }
 
 template<class Cfg>
 template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
+void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const NoAnswerAtAll &,
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
-    readRequestSw(requestCompletion, payloadPtr) ;
+    tappet.kickWorkflow();
 }
 
 template<class Cfg>
 template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
+void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const AtLeastHeader &,
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
-    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size() * sizeof(typename Cfg::AnswerDataRepr), requestContext.answerHdr);
+    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size()
+                             * sizeof(typename Cfg::AnswerDataRepr),
+                             requestContext.answerHdr);
 
-    async_write(*ioSocketPtr, Asio::buffer(&requestContext.answerHdr, sizeof(requestContext.answerHdr)),
-                [=] (const Sys::error_code &errorCode,
-                     size_t)
-                {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(), "Cannot write answer header '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
-                    writeAnswerData(payloadPtr);
-                });
+    async_write(*ioSocketPtr,
+                Asio::buffer(&requestContext.answerHdr,
+                             sizeof(requestContext.answerHdr)),
+                tappet);
 }
 
 template<class Cfg>
 template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
+void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const NothingIfNoData &,
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
-    if (requestContext.outDataBuffer.empty())
+    if (!requestContext.outDataBuffer.empty())
     {
-        readRequestSw(requestCompletion, payloadPtr);
+        writeAnswerHdrSw(requestContext.answerHdr,
+                         AtLeastHeader(),
+                         tappet);
     }
-    else { writeAnswerSw(requestContext.answerHdr, AtLeastHeader(), payloadPtr); }
+    else { tappet.kickWorkflow(); }
 }
 
 template<class Cfg>
 template<class F>
-void Session<Cfg>::writeAnswerSw(
+void Session<Cfg>::writeAnswerHdrSw(
     const NullType &,
     const NothingIfNoData &,
-    PayloadPtr<F> payloadPtr)
+    Tappet<F> tappet)
 {
-    writeAnswerData(payloadPtr);
+    tappet.kickWorkflow();
 }
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::writeAnswerData(PayloadPtr<F> payloadPtr)
+template<class AnswerMode, class F>
+void Session<Cfg>::writeAnswerDataSw(
+    const AnswerMode &,
+    Tappet<F> tappet)
 {
-    if (!requestContext.outDataBuffer.size())
+    if (requestContext.outDataBuffer.size())
     {
-        readRequestSw(requestCompletion, payloadPtr);
+        async_write(*ioSocketPtr,
+                    Asio::buffer(requestContext.outDataBuffer),
+                    tappet);
     }
-    else
-    {
-        async_write(*ioSocketPtr, Asio::buffer(requestContext.outDataBuffer),
-                    [=] (const Sys::error_code &errorCode,
-                         size_t numOfBytesSent)
-                    {
-                        if (administration.exitManager.sessionWasRemoved()) { return; }
-                        if (errorCode)
-                        {
-                            logger(logger.errorOccured(), "Cannot write answer data '%s'; ", errorCode.message().c_str());
-                            return;
-                        }
-                        readRequestSw(requestCompletion, payloadPtr);
-                });
-    }
+    else { tappet.kickWorkflow(); }
+}
+template<class Cfg>
+template<class F>
+void Session<Cfg>::writeAnswerDataSw(
+    const NoAnswerAtAll &,
+    Tappet<F> tappet)
+{
+    tappet.kickWorkflow();
 }
 
 template<class Cfg>
@@ -258,7 +261,9 @@ template<class InitSessionSpecific>
 void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
 {
     TricksAndThings::
-    filteringAdapter(f, static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr), sessionContext.sessionSpecific);
+    filteringAdapter(f,
+                     static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr),
+                     sessionContext.sessionSpecific);
 }
 
 template<class Cfg>
