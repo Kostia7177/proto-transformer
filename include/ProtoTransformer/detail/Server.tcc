@@ -21,6 +21,74 @@
 namespace ProtoTransformer
 {
 
+#include<boost/asio/yield.hpp>
+template<class Proto, class... Params>
+template<class F>
+void Server<Proto, Params...>::Workflow<F>::operator()(
+    SysErrorCode errorCode,
+    size_t)
+{
+    if (session
+        && session->getManagerReference().sessionWasRemoved())
+    { return; }
+
+    if (errorCode)
+    {
+        typename Cfg::Logger &logger = logger;
+        if (phase == Workflow::accepting)
+        {
+            logger(logger.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
+            server->stop();
+        }
+        else
+        {
+            logger(logger.errorOccured(), "%s '%s';", errorMessage[phase].c_str(),
+                                                      errorCode.message().c_str());
+        }
+
+        return;
+    }
+
+    reenter(this)
+    {
+        do
+        {
+            newSocketPtr.reset(new Socket(server->ioService));
+            yield server->acceptor.async_accept(*newSocketPtr,(*this)[WorkflowIfc::accepting]);
+            fork Workflow(*this)();
+        }
+        while (is_parent());
+
+        newSession = std::make_shared<Session<Cfg>>(server->ioService,
+                                                    std::move(*newSocketPtr),
+                                                    server->serverSpace,
+                                                    server->taskManager);
+        session = newSession.get();
+
+        logger(logger.debug(), "New session %zx started; ", session);
+        payloadPtr = std::make_shared<Payload>(*payloadOrig,newSession);
+
+        yield sessionManagerPtr->startSession(newSession, *this);
+        session->initSessionSpecific();
+        do
+        {
+            yield session->readRequestHdr(*this);
+
+            yield session->readRequestData(*this);
+
+            session->processRequest(payloadPtr);
+
+            typedef Int2Type<Cfg::serverSendsAnswer> AnswerMode;
+
+            yield session->writeAnswerHdr(AnswerMode(), *this);
+
+            yield session->writeAnswerDataSw(AnswerMode(), *this);
+        }
+        while (1);
+    }
+}
+#include<boost/asio/unyield.hpp>
+
 template<class Proto, class... Params>
 template<class Handler>
 void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
@@ -32,36 +100,6 @@ void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
                             if (!errorCode)
                             {
                                 beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0)) == sizeof(One)>(), handler, sigNum);
-                                stop();
-                            }
-                          });
-}
-
-template<class Proto, class... Params>
-template<class F>
-void Server<Proto, Params...>::startAccepting(
-    Cfg cfg,
-    F payload,
-    SessionManagerPtr sessionManagerPtr)
-{
-    SocketPtr newSocketPtr(new Socket(ioService));
-    acceptor.async_accept(*newSocketPtr,
-                          [=] (const Sys::error_code &errorCode)
-                          {
-                            if (!errorCode)
-                            {
-                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg,
-                                                                                                          ioService,
-                                                                                                          newSocketPtr,
-                                                                                                          serverSpace,
-                                                                                                          taskManager);
-                                sessionManagerPtr->startSession(newSession, payload);
-                                logger(logger.debug(), "New session %zx started; ", newSession.get());
-                                startAccepting(cfg, payload, sessionManagerPtr);
-                            }
-                            else
-                            {
-                                logger(logger.errorOccured(), "Stopping server due to error '%s'; ", errorCode.message().c_str());
                                 stop();
                             }
                           });
@@ -88,7 +126,7 @@ void Server<ParamProto, Params...>::accept(
     F payload)
 {
     sessionManagerPtr = SessionManagerPtr(new SessionManager);
-    startAccepting(Cfg(), payload, sessionManagerPtr);
+    workflow.reset(new Workflow<F>(this, payload, sessionManagerPtr));
     for (size_t idx = 0; idx < workingThreads.size(); workingThreads.schedule([&] { ioService.run(); }), ++ idx);
     setupSigHandler(typename Cfg::SigintHandler());
     workingThreads.wait();

@@ -4,119 +4,82 @@
 namespace ProtoTransformer
 {
 
-#include<boost/asio/yield.hpp>
 template<class Cfg>
-template<class F>
-void Session<Cfg>::workflow(Tappet<F> tappet)
-{
-    if (goOn)
-    {
-        reenter(this)
-        {
-            yield readSessionHdrSw(sessionContext.sessionHdr,
-                                   tappet.atPhase(readingSessionHdr));
-
-            initSessionSpecificSw(sessionContext.initSessionSpecific);
-
-            do
-            {
-                yield readRequestHdrSw(requestCompletion,
-                                       tappet.atPhase(readingHdr));
-
-                yield readRequestDataSw(requestCompletion,
-                                        tappet.atPhase(readingData));
-
-                processRequest(tappet.payloadPtr);
-
-                typedef Int2Type<Cfg::serverSendsAnswer> AnswerMode;
-                yield writeAnswerHdrSw(requestContext.answerHdr, AnswerMode(),
-                                       tappet.atPhase(writingHdr));
-
-                yield writeAnswerDataSw(AnswerMode(),
-                                        tappet.atPhase(writingData));
-            }
-            while (goOn);
-        }
-    }
-}
-#include<boost/asio/unyield.hpp>
-
-template<class Cfg>
-template<typename SessionHdr, class F>
+template<typename SessionHdr, class W>
 void Session<Cfg>::readSessionHdrSw(
     const SessionHdr &, // session header specified - so read it first;
-    Tappet<F> tappet)
+    W &workflow)
 {
-    async_read(*ioSocketPtr,
+    async_read(ioSocket,
                Asio::buffer(&sessionContext.sessionHdr,
                             sizeof(sessionContext.sessionHdr)),
-               tappet);
+               workflow);
 }
 
 template<class Cfg>
-template<class F>
+template<class W>
 void Session<Cfg>::readSessionHdrSw(
     const NullType &,   // no session header specified - start reading
                         // the requests themselves immediately;
-    Tappet<F> tappet)
+    W &workflow)
 {
-    tappet.kickWorkflow();
+    workflow();
 }
 template<class Cfg>
-template<class RequestCompletion, class F>
+template<class RequestCompletion, class W>
 void Session<Cfg>::readRequestHdrSw(
     const RequestCompletion &,
-    Tappet<F> tappet)
+    W &workflow)
 {
-    tappet.kickWorkflow();
+    workflow();
 }
 
 template<class Cfg>
-template<class F>
+template<class W>
 void Session<Cfg>::readRequestHdrSw(
     const NullType &,   // no reading completion function specified...
-    Tappet<F> tappet)
+    W &workflow)
 {
     setTimer();
     // ...so read the header first...
-    async_read(*ioSocketPtr,
+    async_read(ioSocket,
                Asio::buffer(&requestContext.requestHdr,
                             sizeof(requestContext.requestHdr)),
-               tappet);
+               workflow);
 }
 
 template<class Cfg>
-template<class RequestCompletion, class F>
+template<class RequestCompletion, class W>
 void Session<Cfg>::readRequestDataSw(
     const RequestCompletion &,  // completion function instead of
                                 // request header specified;
-    Tappet<F> tappet)
+    const W &workflow)
 {
     setTimer();
-    administration.readingManager.get(*ioSocketPtr,
-                                      tappet,
+    administration.readingManager.get(ioSocket,
+                                      workflow,
                                       sessionContext.sessionHdr);
 }
 
 template<class Cfg>
-template<class F>
+template<class W>
 void Session<Cfg>::readRequestDataSw(
     const NullType &,
-    Tappet<F> tappet)
+    const W &workflow)
 {
     // ...and then get a request size from the header...
     requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr)
                                        / sizeof(typename Cfg::RequestDataRepr));
 
     // ...and then read the request itself;
-    async_read(*ioSocketPtr,
+    async_read(ioSocket,
                Asio::buffer(requestContext.inDataBuffer),
-               tappet);
+               workflow);
 }
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
+template<class PayloadPtr>
+void Session<Cfg>::processRequest(PayloadPtr payloadPtr)
 {
     cancelTimer();
     requestContext.outDataBuffer.clear();
@@ -127,7 +90,7 @@ void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
                                             int retCode = 0;
                                             try
                                             {
-                                                PayloadPtr<F> keeper(payloadPtr);
+                                                PayloadPtr keeper(payloadPtr);
 
                                                 // no need to pass to a payload:
                                                 // -- request header, if it doesn't contents anything but size of a request -
@@ -176,84 +139,84 @@ void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
                                                        "Payload function have thrown an unrecognized exception; ");
                                             }
 
-                                            if (!retCode) { ioSocketPtr->shutdown(Socket::shutdown_receive); }
+                                            if (!retCode) { ioSocket.shutdown(Socket::shutdown_receive); }
                                          });
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
+template<typename AnswerHdr, class W>
 void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const NoAnswerAtAll &,
-    Tappet<F> tappet)
+    W &workflow)
 {
-    tappet.kickWorkflow();
+    workflow();
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
+template<typename AnswerHdr, class W>
 void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const AtLeastHeader &,
-    Tappet<F> tappet)
+    W &workflow)
 {
     Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size()
                              * sizeof(typename Cfg::AnswerDataRepr),
                              requestContext.answerHdr);
 
-    async_write(*ioSocketPtr,
+    async_write(ioSocket,
                 Asio::buffer(&requestContext.answerHdr,
                              sizeof(requestContext.answerHdr)),
-                tappet);
+                workflow[W::writingHdr]);
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
+template<typename AnswerHdr, class W>
 void Session<Cfg>::writeAnswerHdrSw(
     const AnswerHdr &,
     const NothingIfNoData &,
-    Tappet<F> tappet)
+    W &workflow)
 {
     if (!requestContext.outDataBuffer.empty())
     {
         writeAnswerHdrSw(requestContext.answerHdr,
                          AtLeastHeader(),
-                         tappet);
+                         workflow);
     }
-    else { tappet.kickWorkflow(); }
+    else { workflow(); }
 }
 
 template<class Cfg>
-template<class F>
+template<class W>
 void Session<Cfg>::writeAnswerHdrSw(
     const NullType &,
     const NothingIfNoData &,
-    Tappet<F> tappet)
+    W &workflow)
 {
-    tappet.kickWorkflow();
+    workflow();
 }
 
 template<class Cfg>
-template<class AnswerMode, class F>
+template<class AnswerMode, class W>
 void Session<Cfg>::writeAnswerDataSw(
     const AnswerMode &,
-    Tappet<F> tappet)
+    W &workflow)
 {
     if (requestContext.outDataBuffer.size())
     {
-        async_write(*ioSocketPtr,
+        async_write(ioSocket,
                     Asio::buffer(requestContext.outDataBuffer),
-                    tappet);
+                    workflow[W::writingData]);
     }
-    else { tappet.kickWorkflow(); }
+    else { workflow(); }
 }
 template<class Cfg>
-template<class F>
+template<class W>
 void Session<Cfg>::writeAnswerDataSw(
     const NoAnswerAtAll &,
-    Tappet<F> tappet)
+    W &workflow)
 {
-    tappet.kickWorkflow();
+    workflow();
 }
 
 template<class Cfg>
@@ -270,9 +233,7 @@ template<class Cfg>
 void Session<Cfg>::setTimer()
 {
     readingTimeout.set([=]
-                       {
-                            ioSocketPtr->shutdown(Socket::shutdown_receive);
-                       },
+                       { ioSocket.shutdown(Socket::shutdown_receive); },
                        sessionContext.sessionHdrRO,
                        sessionContext.sessionSpecific,
                        serverSpace);

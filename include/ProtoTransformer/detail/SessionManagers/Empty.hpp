@@ -11,7 +11,8 @@ struct EmptyManager
     template<class S>
     struct Itself
     {
-        template<class F> void startSession(std::shared_ptr<S> session, F payload){ session->run(payload); }
+        template<class W> void startSession(std::shared_ptr<S> session, W &workflow)
+        { session->run(workflow); }
     };
 
     template<class S>

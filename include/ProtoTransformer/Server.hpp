@@ -72,14 +72,88 @@ class Server
     Asio::io_service ioService;
     Ip::tcp::acceptor acceptor;
     typename Cfg::ServerThreadPool workingThreads;
-    typename Cfg::Logger logger;
     typedef typename Cfg::ServerSpace ServerSpace;
     ServerSpace *serverSpace;
-    typename Cfg::TaskManager taskManager;
+
+    struct WorkflowIfc
+    {
+        virtual ~WorkflowIfc(){}
+
+        enum Phase
+        {
+            unspecified,
+            accepting,
+            readingSessionHdr,
+            readingHdr,
+            readingData,
+            writingHdr,
+            writingData
+        };
+    };
+
+    using ErrorMessages = std::map<typename WorkflowIfc::Phase, std::string>;
+    static ErrorMessages errorMessage;
 
     typedef typename Cfg::SessionManager::template Itself<Session<Cfg>> SessionManager;
     typedef std::shared_ptr<SessionManager> SessionManagerPtr;
     SessionManagerPtr sessionManagerPtr;
+
+    template<class F>
+    class Workflow
+        : public WorkflowIfc,
+          public Asio::coroutine
+    {
+        Server *server;
+        SocketPtr newSocketPtr;
+
+        typedef typename Cfg::SessionManager::template ExitDetector<Session<Cfg>> ExitDetector;
+        // payload container plus session keeper
+        // (shared-pointer-based exit detector);
+        // will be passed by copying from one phase to another
+        // until one of the phases will return (due to error
+        // or at the exit-condition, which is 0 returned by
+        // payload)
+        // 'F' is a payload code that will be called inside
+        // 'processRequest' (we cannot include it into 'Cfg')
+        struct Payload
+        {
+            ExitDetector exitDetector;
+            F itself;
+            Payload(F f, std::shared_ptr<Session<Cfg>> s)
+                : exitDetector(s), itself(f){}
+        };
+
+        std::shared_ptr<Session<Cfg>> newSession;
+        Session<Cfg> *session;
+
+        std::shared_ptr<Payload> payloadPtr;
+        std::shared_ptr<F> payloadOrig;
+
+        SessionManagerPtr sessionManagerPtr;
+        typename WorkflowIfc::Phase phase;
+        typename Cfg::Logger logger;
+
+        typedef Sys::error_code SysErrorCode;
+
+        public:
+
+        Workflow(Server *s, F f, SessionManagerPtr p)
+            : server(s),
+              session(0),
+              payloadOrig(new F(f)),
+              sessionManagerPtr(p),
+              phase(WorkflowIfc::unspecified)
+        {
+            (*this)();
+        }
+
+        void operator()(SysErrorCode = SysErrorCode(), size_t = 0);
+
+        Workflow &operator[](typename WorkflowIfc::Phase p)
+        { return phase = p, *this; }
+    };
+    std::unique_ptr<WorkflowIfc> workflow;
+    typename Cfg::TaskManager taskManager;
 
     Asio::signal_set sigHandler;
     Server(const Server &);
@@ -88,9 +162,6 @@ class Server
     void setupSigHandler(NullType){}
     template<class H>
     void setupSigHandler(const H &);
-
-    // working body;
-    template<class F> void startAccepting(Cfg, F, SessionManagerPtr);
 
     public:
 
@@ -104,6 +175,17 @@ class Server
 
     template<class F> void accept(F);
     void stop(){ ioService.stop(); }
+};
+
+template<class ParamProto, class... Params>
+typename Server<ParamProto, Params...>::ErrorMessages Server<ParamProto, Params...>::errorMessage
+{
+    { Server<ParamProto, Params...>::WorkflowIfc::unspecified, "Anything have been failed" },
+    { Server<ParamProto, Params...>::WorkflowIfc::readingSessionHdr, "Cannot read session header:" },
+    { Server<ParamProto, Params...>::WorkflowIfc::readingHdr, "Cannot read request header" },
+    { Server<ParamProto, Params...>::WorkflowIfc::readingData, "Cannot read request data" },
+    { Server<ParamProto, Params...>::WorkflowIfc::writingHdr, "Cannot write answer header" },
+    { Server<ParamProto, Params...>::WorkflowIfc::writingData, "Cannot write answer data" }
 };
 
 }

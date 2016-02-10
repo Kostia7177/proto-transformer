@@ -39,7 +39,7 @@ struct SessionManagerWithMap
         Itself() : exitDispatcherPtr(new ExitDispatcher<S>(this)){}
         ~Itself();
 
-        template<class F> void startSession(std::shared_ptr<S>, F);
+        template<class W> void startSession(std::shared_ptr<S>, W &);
         void drop(Reference<S> *session2Drop){ ioConnections.erase(session2Drop); }
     };
 
@@ -100,16 +100,16 @@ SessionManagerWithMap::Itself<S>::~Itself()
 }
 
 template<class S>
-template<class F>
+template<class W>
 void SessionManagerWithMap::Itself<S>::startSession(
     std::shared_ptr<S> session,
-    F payload)
+    W &workflow)
 {
     std::lock_guard<std::mutex> lockWhenInserting(exitDispatcherPtr->locker);
     session->getManagerReference().setDispatcher(exitDispatcherPtr);
     ioConnections.insert(std::make_pair(&session->getManagerReference(), std::shared_ptr<SessionPtr>(new SessionPtr(session))));
     // now the pointer to a session is shared between  an 'ioConnections' map...
-    session->run(payload);
+    session->run(workflow);
     // ...and a chain of async-calls;
 }
 
