@@ -47,7 +47,7 @@ class Session
     //
     template<class InitSessionSpecific>
     void initSessionSpecificSw(const InitSessionSpecific &);
-    void initSessionSpecificSw(NullType){}
+    void initSessionSpecificSw(NullType) {}
     //
     // overloads of request processing phases
     template<class RequestCompletion,
@@ -68,7 +68,7 @@ class Session
     template<class W> void writeAnswerHdrSw(const NullType &, const NothingIfNoData &, W &);
 
     void setTimer();
-    void cancelTimer(){ readingTimeout.cancel(); }
+    void cancelTimer() { readingTimeout.cancel(); }
 
     public:
 
@@ -80,9 +80,10 @@ class Session
         : serverSpace(serverSpaceArg),
           administration(requestContext.inDataBuffer, managerRef),
           ioSocket(std::move(socketArg)),
-          readingTimeout(ioService){}
+          readingTimeout(ioService)
+    { logger(logger.debug(), "New session %#zx started; ", this);}
 
-    ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }
+    ~Session() { logger(logger.debug(), "Closing the session %#zx; ", this); }
 
     typename Administration::ExitManager &getManagerReference()
     { return administration.exitManager; }

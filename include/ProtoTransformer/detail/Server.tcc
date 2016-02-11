@@ -54,22 +54,22 @@ void Server<Proto, Params...>::Workflow<F>::operator()(
         do
         {
             newSocketPtr.reset(new Socket(server->ioService));
-            yield server->acceptor.async_accept(*newSocketPtr,(*this)[WorkflowIfc::accepting]);
+            yield server->acceptor.async_accept(*newSocketPtr, (*this)[WorkflowIfc::accepting]);
+
             fork Workflow(*this)();
         }
         while (is_parent());
 
-        newSession = std::make_shared<Session<Cfg>>(server->ioService,
-                                                    std::move(*newSocketPtr),
-                                                    server->serverSpace,
-                                                    server->taskManager);
-        session = newSession.get();
+        session = std::make_shared<Session<Cfg>>(server->ioService,
+                                                 std::move(*newSocketPtr),
+                                                 server->serverSpace,
+                                                 server->taskManager);
 
-        logger(logger.debug(), "New session %zx started; ", session);
-        payloadPtr = std::make_shared<Payload>(*payloadOrig,newSession);
+        payloadPtr = std::make_shared<Payload>(*payloadOrig, session);
 
-        yield sessionManagerPtr->startSession(newSession, *this);
+        yield sessionManagerPtr->startSession(session, *this);
         session->initSessionSpecific();
+
         do
         {
             yield session->readRequestHdr(*this);
@@ -99,7 +99,10 @@ void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
                           {
                             if (!errorCode)
                             {
-                                beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0)) == sizeof(One)>(), handler, sigNum);
+                                beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0))
+                                                      == sizeof(One)>(),
+                                             handler,
+                                             sigNum);
                                 stop();
                             }
                           });
@@ -127,7 +130,11 @@ void Server<ParamProto, Params...>::accept(
 {
     sessionManagerPtr = SessionManagerPtr(new SessionManager);
     workflow.reset(new Workflow<F>(this, payload, sessionManagerPtr));
-    for (size_t idx = 0; idx < workingThreads.size(); workingThreads.schedule([&] { ioService.run(); }), ++ idx);
+
+    for (size_t idx = 0; idx < workingThreads.size();
+         workingThreads.schedule([&] { ioService.run(); }),
+         ++ idx);
+
     setupSigHandler(typename Cfg::SigintHandler());
     workingThreads.wait();
 }

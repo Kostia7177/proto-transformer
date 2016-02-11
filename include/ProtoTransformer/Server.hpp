@@ -77,7 +77,7 @@ class Server
 
     struct WorkflowIfc
     {
-        virtual ~WorkflowIfc(){}
+        virtual ~WorkflowIfc() {}
 
         enum Phase
         {
@@ -120,11 +120,10 @@ class Server
             ExitDetector exitDetector;
             F itself;
             Payload(F f, std::shared_ptr<Session<Cfg>> s)
-                : exitDetector(s), itself(f){}
+                : exitDetector(s), itself(f) {}
         };
 
-        std::shared_ptr<Session<Cfg>> newSession;
-        Session<Cfg> *session;
+        std::shared_ptr<Session<Cfg>> session;
 
         std::shared_ptr<Payload> payloadPtr;
         std::shared_ptr<F> payloadOrig;
@@ -139,13 +138,10 @@ class Server
 
         Workflow(Server *s, F f, SessionManagerPtr p)
             : server(s),
-              session(0),
               payloadOrig(new F(f)),
               sessionManagerPtr(p),
               phase(WorkflowIfc::unspecified)
-        {
-            (*this)();
-        }
+        { (*this)(); }
 
         void operator()(SysErrorCode = SysErrorCode(), size_t = 0);
 
@@ -159,7 +155,7 @@ class Server
     Server(const Server &);
     Server &operator= (const Server &);
 
-    void setupSigHandler(NullType){}
+    void setupSigHandler(NullType) {}
     template<class H>
     void setupSigHandler(const H &);
 
@@ -169,12 +165,13 @@ class Server
         : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
           serverSpace(inServerSpace),
           taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)),
-          sigHandler(ioService){}
+          sigHandler(ioService) {}
+
     template<class F> Server(size_t port, F, ServerSpace * = 0);
-    ~Server(){}
+    ~Server() {}
 
     template<class F> void accept(F);
-    void stop(){ ioService.stop(); }
+    void stop() { ioService.stop(); }
 };
 
 template<class ParamProto, class... Params>
