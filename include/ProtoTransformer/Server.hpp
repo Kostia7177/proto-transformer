@@ -125,8 +125,8 @@ class Server
 
         std::shared_ptr<Session<Cfg>> session;
 
+        const std::shared_ptr<const F> payloadOrig;
         std::shared_ptr<Payload> payloadPtr;
-        std::shared_ptr<F> payloadOrig;
 
         SessionManagerPtr sessionManagerPtr;
         typename WorkflowIfc::Phase phase;
@@ -138,8 +138,8 @@ class Server
 
         Workflow(Server *s, F f, SessionManagerPtr p)
             : server(s),
-              payloadOrig(new F(f)),
               sessionManagerPtr(p),
+              payloadOrig(new F(f)),
               phase(WorkflowIfc::unspecified)
         { (*this)(); }
 

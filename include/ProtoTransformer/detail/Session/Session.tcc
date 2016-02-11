@@ -25,6 +25,17 @@ void Session<Cfg>::readSessionHdrSw(
 {
     workflow();
 }
+
+template<class Cfg>
+template<class InitSessionSpecific>
+void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
+{
+    TricksAndThings::
+    filteringAdapter(f,
+                     static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr),
+                     sessionContext.sessionSpecific);
+}
+
 template<class Cfg>
 template<class RequestCompletion, class W>
 void Session<Cfg>::readRequestHdrSw(
@@ -197,6 +208,16 @@ void Session<Cfg>::writeAnswerHdrSw(
 }
 
 template<class Cfg>
+void Session<Cfg>::setTimer()
+{
+    readingTimeout.set([=]
+                       { ioSocket.shutdown(Socket::shutdown_receive); },
+                       sessionContext.sessionHdrRO,
+                       sessionContext.sessionSpecific,
+                       serverSpace);
+}
+
+template<class Cfg>
 template<class AnswerMode, class W>
 void Session<Cfg>::writeAnswerDataSw(
     const AnswerMode &,
@@ -217,26 +238,6 @@ void Session<Cfg>::writeAnswerDataSw(
     W &workflow)
 {
     workflow();
-}
-
-template<class Cfg>
-template<class InitSessionSpecific>
-void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
-{
-    TricksAndThings::
-    filteringAdapter(f,
-                     static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr),
-                     sessionContext.sessionSpecific);
-}
-
-template<class Cfg>
-void Session<Cfg>::setTimer()
-{
-    readingTimeout.set([=]
-                       { ioSocket.shutdown(Socket::shutdown_receive); },
-                       sessionContext.sessionHdrRO,
-                       sessionContext.sessionSpecific,
-                       serverSpace);
 }
 
 }
