@@ -29,7 +29,7 @@ class Session
 
     typename Cfg::Logger logger;
 
-    SocketPtr ioSocketPtr;
+    Socket ioSocket;
 
     typename Cfg::RequestTimeout readingTimeout;
 
@@ -51,7 +51,7 @@ class Session
         ExitDetector exitDetector;
         F itself;
         Payload(F f, std::shared_ptr<Session> s)
-            : exitDetector(s), itself(f){}
+            : exitDetector(s), itself(f) {}
     };
 
     template<class F>
@@ -87,23 +87,25 @@ class Session
 
     template<class InitSessionSpecific>
     void initSessionSpecificSw(const InitSessionSpecific &);
-    void initSessionSpecificSw(NullType){}
+    void initSessionSpecificSw(NullType) {}
+
     void setTimer();
-    void cancelTimer(){ readingTimeout.cancel(); }
+    void cancelTimer() { readingTimeout.cancel(); }
 
     public:
 
     Session(
-        Cfg cfg,
         Asio::io_service &ioService,
         SocketPtr socketPtrArg,
         ServerSpace *serverSpaceArg,
         typename Cfg::TaskManager &managerRef)
         : serverSpace(serverSpaceArg),
           administration(requestContext.inDataBuffer, managerRef),
-          ioSocketPtr(socketPtrArg),
-          readingTimeout(ioService){}
-    ~Session(){ logger(logger.debug(), "Closing the session %#zx; ", this); }
+          ioSocket(std::move(*socketPtrArg)),
+          readingTimeout(ioService)
+    { logger(logger.debug(), "New session %#zx started; ", this); }
+
+    ~Session() { logger(logger.debug(), "Closing the session %#zx; ", this); }
 
     template<class F> void run(F);
 

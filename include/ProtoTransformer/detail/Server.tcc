@@ -31,7 +31,10 @@ void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
                           {
                             if (!errorCode)
                             {
-                                beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0)) == sizeof(One)>(), handler, sigNum);
+                                beforeStopSw(Int2Type<sizeof(withBeforeStopActions<Handler>(0))
+                                                      == sizeof(One)>(),
+                                             handler,
+                                             sigNum);
                                 stop();
                             }
                           });
@@ -40,7 +43,6 @@ void Server<Proto, Params...>::setupSigHandler(const Handler &handler)
 template<class Proto, class... Params>
 template<class F>
 void Server<Proto, Params...>::startAccepting(
-    Cfg cfg,
     F payload,
     SessionManagerPtr sessionManagerPtr)
 {
@@ -50,14 +52,12 @@ void Server<Proto, Params...>::startAccepting(
                           {
                             if (!errorCode)
                             {
-                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(cfg,
-                                                                                                          ioService,
+                                std::shared_ptr<Session<Cfg>> newSession = std::make_shared<Session<Cfg>>(ioService,
                                                                                                           newSocketPtr,
                                                                                                           serverSpace,
                                                                                                           taskManager);
                                 sessionManagerPtr->startSession(newSession, payload);
-                                logger(logger.debug(), "New session %zx started; ", newSession.get());
-                                startAccepting(cfg, payload, sessionManagerPtr);
+                                startAccepting(payload, sessionManagerPtr);
                             }
                             else
                             {
@@ -88,8 +88,12 @@ void Server<ParamProto, Params...>::accept(
     F payload)
 {
     sessionManagerPtr = SessionManagerPtr(new SessionManager);
-    startAccepting(Cfg(), payload, sessionManagerPtr);
-    for (size_t idx = 0; idx < workingThreads.size(); workingThreads.schedule([&] { ioService.run(); }), ++ idx);
+    startAccepting(payload, sessionManagerPtr);
+
+    for (size_t idx = 0; idx < workingThreads.size();
+         workingThreads.schedule([&] { ioService.run(); }),
+         ++ idx);
+
     setupSigHandler(typename Cfg::SigintHandler());
     workingThreads.wait();
 }

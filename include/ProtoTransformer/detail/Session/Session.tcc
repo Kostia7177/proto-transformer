@@ -8,7 +8,9 @@ template<class Cfg>
 template<class F>
 void Session<Cfg>::run(F payload)
 {
-    runSw(sessionContext.sessionHdr, std::shared_ptr<Payload<F>>(new Payload<F>(payload, this->shared_from_this())));
+    runSw(sessionContext.sessionHdr,
+          std::shared_ptr<Payload<F>>(new Payload<F>(payload,
+                                      this->shared_from_this())));
 }
 
 template<class Cfg>
@@ -17,7 +19,7 @@ void Session<Cfg>::runSw(
     const SessionHdr &, // session header specified - so read it first;
     PayloadPtr<F> payloadPtr)
 {
-    async_read(*ioSocketPtr,
+    async_read(ioSocket,
                Asio::buffer(&sessionContext.sessionHdr, sizeof(sessionContext.sessionHdr)),
                [=] (const Sys::error_code &errorCode,
                     size_t numOfBytes)
@@ -53,7 +55,7 @@ void Session<Cfg>::readRequestSw(
     PayloadPtr<F> payloadPtr)
 {
     setTimer();
-    administration.readingManager.get(*ioSocketPtr,
+    administration.readingManager.get(ioSocket,
                                       [=]
                                       {
                                         if (administration.exitManager.sessionWasRemoved()) { return; }
@@ -70,7 +72,7 @@ void Session<Cfg>::readRequestSw(
 {
     setTimer();
     // ...so read the header first...
-    async_read(*ioSocketPtr,
+    async_read(ioSocket,
                Asio::buffer(&requestContext.requestHdr, sizeof(requestContext.requestHdr)),
                [=] (const Sys::error_code &errorCode,
                     size_t numOfBytes)
@@ -83,10 +85,11 @@ void Session<Cfg>::readRequestSw(
                     }
 
                     // ...and then get a request size from the header...
-                    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr) / sizeof(typename Cfg::RequestDataRepr));
+                    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr)
+                                                       / sizeof(typename Cfg::RequestDataRepr));
 
                     // ...and then read the request itself;
-                    async_read(*ioSocketPtr,
+                    async_read(ioSocket,
                                Asio::buffer(requestContext.inDataBuffer),
                                [=] (const Sys::error_code &errorCode,
                                     size_t numOfBytesRecivied)
@@ -164,11 +167,14 @@ void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
                                                        "Payload function have thrown an unrecognized exception; ");
                                             }
 
-                                            if (!retCode) { ioSocketPtr->shutdown(Socket::shutdown_receive); }
+                                            if (!retCode) { ioSocket.shutdown(Socket::shutdown_receive); }
                                          });
 
     if (administration.exitManager.sessionWasRemoved()) { return; }
-    writeAnswerSw(requestContext.answerHdr, Int2Type<Cfg::serverSendsAnswer>(), payloadPtr);
+
+    writeAnswerSw(requestContext.answerHdr,
+                  Int2Type<Cfg::serverSendsAnswer>(),
+                  payloadPtr);
 }
 
 template<class Cfg>
@@ -178,7 +184,7 @@ void Session<Cfg>::writeAnswerSw(
     const NoAnswerAtAll &,
     PayloadPtr<F> payloadPtr)
 {
-    readRequestSw(requestCompletion, payloadPtr) ;
+    readRequestSw(requestCompletion, payloadPtr);
 }
 
 template<class Cfg>
@@ -188,9 +194,9 @@ void Session<Cfg>::writeAnswerSw(
     const AtLeastHeader &,
     PayloadPtr<F> payloadPtr)
 {
-    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size() * sizeof(typename Cfg::AnswerDataRepr), requestContext.answerHdr);
+    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size()* sizeof(typename Cfg::AnswerDataRepr), requestContext.answerHdr);
 
-    async_write(*ioSocketPtr, Asio::buffer(&requestContext.answerHdr, sizeof(requestContext.answerHdr)),
+    async_write(ioSocket, Asio::buffer(&requestContext.answerHdr, sizeof(requestContext.answerHdr)),
                 [=] (const Sys::error_code &errorCode,
                      size_t)
                 {
@@ -215,7 +221,9 @@ void Session<Cfg>::writeAnswerSw(
     {
         readRequestSw(requestCompletion, payloadPtr);
     }
-    else { writeAnswerSw(requestContext.answerHdr, AtLeastHeader(), payloadPtr); }
+    else { writeAnswerSw(requestContext.answerHdr,
+                         AtLeastHeader(),
+                         payloadPtr); }
 }
 
 template<class Cfg>
@@ -238,7 +246,7 @@ void Session<Cfg>::writeAnswerData(PayloadPtr<F> payloadPtr)
     }
     else
     {
-        async_write(*ioSocketPtr, Asio::buffer(requestContext.outDataBuffer),
+        async_write(ioSocket, Asio::buffer(requestContext.outDataBuffer),
                     [=] (const Sys::error_code &errorCode,
                          size_t numOfBytesSent)
                     {
@@ -258,16 +266,16 @@ template<class InitSessionSpecific>
 void Session<Cfg>::initSessionSpecificSw(const InitSessionSpecific &f)
 {
     TricksAndThings::
-    filteringAdapter(f, static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr), sessionContext.sessionSpecific);
+    filteringAdapter(f,
+                     static_cast<const typename Cfg::SessionHdr &>(sessionContext.sessionHdr),
+                     sessionContext.sessionSpecific);
 }
 
 template<class Cfg>
 void Session<Cfg>::setTimer()
 {
     readingTimeout.set([=]
-                       {
-                            ioSocketPtr->shutdown(Socket::shutdown_receive);
-                       },
+                       { ioSocket.shutdown(Socket::shutdown_receive); },
                        sessionContext.sessionHdrRO,
                        sessionContext.sessionSpecific,
                        serverSpace);

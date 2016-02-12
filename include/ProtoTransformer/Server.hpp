@@ -85,12 +85,12 @@ class Server
     Server(const Server &);
     Server &operator= (const Server &);
 
-    void setupSigHandler(NullType){}
+    void setupSigHandler(NullType) {}
     template<class H>
     void setupSigHandler(const H &);
 
     // working body;
-    template<class F> void startAccepting(Cfg, F, SessionManagerPtr);
+    template<class F> void startAccepting(F, SessionManagerPtr);
 
     public:
 
@@ -98,12 +98,13 @@ class Server
         : acceptor(ioService, Ip::tcp::endpoint(Ip::tcp::v4(), port)),
           serverSpace(inServerSpace),
           taskManager(getNumOfThreads(Cfg::numOfRequestsPerSession)),
-          sigHandler(ioService){}
+          sigHandler(ioService) {}
+
     template<class F> Server(size_t port, F, ServerSpace * = 0);
-    ~Server(){}
+    ~Server() {}
 
     template<class F> void accept(F);
-    void stop(){ ioService.stop(); }
+    void stop() { ioService.stop(); }
 };
 
 }
