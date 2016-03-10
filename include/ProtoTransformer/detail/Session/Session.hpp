@@ -3,11 +3,13 @@
 #include "SessionContext.hpp"
 #include "RequestContext.hpp"
 #include "SessionAdministration.hpp"
+#include<boost/asio/spawn.hpp>
 
 namespace ProtoTransformer
 {
 
 typedef std::shared_ptr<Socket> SocketPtr;
+typedef Asio::yield_context YieldContext;
 
 template<class Cfg>
 class Session
@@ -57,32 +59,48 @@ class Session
     template<class F>
     using PayloadPtr = std::shared_ptr<Payload<F>>;
 
+    enum Phase
+    {
+        readingSessionHdr,
+        readingRequestHdr,
+        readingRequestData,
+        writingAnswerHdr,
+        writingAnswerData
+    };
+    Phase phase;
+
+    using ErrorMessages = std::map<Phase, std::string>;
+    static ErrorMessages errorMessages;
+
+    struct SessionWasRemoved
+    : std::exception {};
+
+    void throwIfRemoved();
+
     // the following is a working body of a session.
     // first 1 or 2 parameters of each 'Sw'-marked function
     // provide such a compile-time overload-based Switch
     // between different possible configuration variants.
     //
     // opening a new session
-    template<typename SessionHdr,
-             class F> void runSw(const SessionHdr &, PayloadPtr<F>);
-    template<class F> void runSw(const NullType &, PayloadPtr<F>);
+    template<typename SessionHdr> void readSessionHdrSw(SessionHdr &, const YieldContext &);
+    void readSessionHdrSw(NullType &, const YieldContext &);
     //
     // request processing phases (*)
-    template<class RequestCompletion,
-             class F> void readRequestSw(const RequestCompletion &, PayloadPtr<F>);
-    template<class F> void readRequestSw(const NullType &, PayloadPtr<F>);
+    template<class RequestHdr> void readRequestHdrSw(RequestHdr &, const YieldContext &);
+    void readRequestHdrSw(NullType &, const YieldContext &);
+    template<class RequestCompletion> void readRequestDataSw(const RequestCompletion &, const YieldContext &);
+    void readRequestDataSw(const NullType &, const YieldContext &);
     //
     template<class F> void processRequest(PayloadPtr<F>);
     //
-    template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NoAnswerAtAll &, PayloadPtr<F>);
-    template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const AtLeastHeader &, PayloadPtr<F>);
-    template<typename AnswerHdr,
-             class F> void writeAnswerSw(const AnswerHdr &, const NothingIfNoData &, PayloadPtr<F>);
-    template<class F> void writeAnswerSw(const NullType &, const NothingIfNoData &, PayloadPtr<F>);
+    template<typename AnswerHdr> void writeAnswerHdrSw(AnswerHdr &, const NoAnswerAtAll &, const YieldContext &);
+    template<typename AnswerHdr> void writeAnswerHdrSw(AnswerHdr &, const AtLeastHeader &, const YieldContext &);
+    template<typename AnswerHdr> void writeAnswerHdrSw(AnswerHdr &, const NothingIfNoData &, const YieldContext &);
+    void writeAnswerHdrSw(NullType &, const NothingIfNoData &, const YieldContext &);
     //
-    template<class F> void writeAnswerData(PayloadPtr<F>);
+    template<class Condition> void writeAnswerData(const Condition &, const YieldContext &);
+    void writeAnswerData(const NoAnswerAtAll &, const YieldContext &);
     // ...and so on - go to a new request (*);
 
     template<class InitSessionSpecific>
@@ -110,6 +128,16 @@ class Session
     template<class F> void run(F);
 
     typename Administration::ExitManager &getManagerReference() { return administration.exitManager; }
+};
+
+template<class Cfg>
+typename Session<Cfg>::ErrorMessages Session<Cfg>::errorMessages
+{
+    { readingSessionHdr, "Cannot read session header" },
+    { readingRequestHdr, "Cannot read request header" },
+    { readingRequestData, "Cannot read request data" },
+    { writingAnswerHdr, "Cannot write answer header" },
+    { writingAnswerData, "Cannot write answer data" }
 };
 
 }

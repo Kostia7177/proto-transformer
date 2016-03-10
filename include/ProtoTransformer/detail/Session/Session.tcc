@@ -5,104 +5,84 @@ namespace ProtoTransformer
 {
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::run(F payload)
+void Session<Cfg>::throwIfRemoved()
 {
-    runSw(sessionContext.sessionHdr,
-          std::shared_ptr<Payload<F>>(new Payload<F>(payload,
-                                      this->shared_from_this())));
+    if (administration.exitManager.sessionWasRemoved())
+    { throw SessionWasRemoved(); }
 }
 
 template<class Cfg>
-template<typename SessionHdr, class F>
-void Session<Cfg>::runSw(
-    const SessionHdr &, // session header specified - so read it first;
-    PayloadPtr<F> payloadPtr)
+template<typename SessionHdr>
+void Session<Cfg>::readSessionHdrSw(
+    SessionHdr &buf, // session header specified - so read it first;
+    const YieldContext &yield)
 {
+    phase = readingSessionHdr;
     async_read(ioSocket,
-               Asio::buffer(&sessionContext.sessionHdr, sizeof(sessionContext.sessionHdr)),
-               [=] (const Sys::error_code &errorCode,
-                    size_t numOfBytes)
-               {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(),
-                               "Cannot read session header: '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
-                    initSessionSpecificSw(sessionContext.initSessionSpecific);
-                    readRequestSw(requestCompletion, payloadPtr);
-               });
+               Asio::buffer(&buf,
+                            sizeof(buf)),
+               yield);
+    throwIfRemoved();
 }
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::runSw(
-    const NullType &,   // no session header specified - start reading
+void Session<Cfg>::readSessionHdrSw(
+    NullType &,   // no session header specified - start reading
                         // the requests themselves immediately;
-    PayloadPtr<F> payloadPtr)
+    const YieldContext &)
 {
-    initSessionSpecificSw(sessionContext.initSessionSpecific);
-    readRequestSw(requestCompletion, payloadPtr);
 }
 
 template<class Cfg>
-template<class RequestCompletion, class F>
-void Session<Cfg>::readRequestSw(
-    const RequestCompletion &,  // completion function instead of
-                                // request header specified;
-    PayloadPtr<F> payloadPtr)
+template<class RequestHdr>
+void Session<Cfg>::readRequestHdrSw(
+    RequestHdr &buf,
+    const YieldContext &yield)
 {
-    setTimer();
-    administration.readingManager.get(ioSocket,
-                                      [=]
-                                      {
-                                        if (administration.exitManager.sessionWasRemoved()) { return; }
-                                        processRequest(payloadPtr);
-                                      },
-                                      sessionContext.sessionHdr);
-}
-
-template<class Cfg>
-template<class F>
-void Session<Cfg>::readRequestSw(
-    const NullType &,   // no reading completion function specified...
-    PayloadPtr<F> payloadPtr)
-{
+    phase = readingRequestHdr;
     setTimer();
     // ...so read the header first...
     async_read(ioSocket,
-               Asio::buffer(&requestContext.requestHdr, sizeof(requestContext.requestHdr)),
-               [=] (const Sys::error_code &errorCode,
-                    size_t numOfBytes)
-               {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(), "Cannot read request header '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
+               Asio::buffer(&buf,
+                            sizeof(buf)),
+               yield);
+    throwIfRemoved();
+}
 
-                    // ...and then get a request size from the header...
-                    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr)
-                                                       / sizeof(typename Cfg::RequestDataRepr));
+template<class Cfg>
+void Session<Cfg>::readRequestHdrSw(
+    NullType &,
+    const YieldContext &)
+{
+}
 
-                    // ...and then read the request itself;
-                    async_read(ioSocket,
-                               Asio::buffer(requestContext.inDataBuffer),
-                               [=] (const Sys::error_code &errorCode,
-                                    size_t numOfBytesRecivied)
-                               {
-                                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                                    if (errorCode)
-                                    {
-                                        logger(logger.errorOccured(), "Cannot read request data '%s'; ", errorCode.message().c_str());
-                                        return;
-                                    }
-                                    processRequest(payloadPtr);
-                               });
-               });
+template<class Cfg>
+template<class RequestCompletion>
+void Session<Cfg>::readRequestDataSw(
+    const RequestCompletion &,  // completion function instead of
+                                // request header specified;
+    const YieldContext &yield)
+{
+    setTimer();
+    phase = readingRequestData;
+    administration.readingManager.get(ioSocket,
+                                      yield,
+                                      sessionContext.sessionHdr);
+    throwIfRemoved();
+}
+
+template<class Cfg>
+void Session<Cfg>::readRequestDataSw(
+    const NullType &,   // no reading completion function specified...
+    const YieldContext &yield)
+{
+    requestContext.inDataBuffer.resize(Cfg::RequestHdr::getSize(requestContext.requestHdr)
+                                       / sizeof(typename Cfg::RequestDataRepr));
+    phase = readingRequestData;
+    async_read(ioSocket,
+               Asio::buffer(requestContext.inDataBuffer),
+               yield);
+    throwIfRemoved();
 }
 
 template<class Cfg>
@@ -169,96 +149,80 @@ void Session<Cfg>::processRequest(PayloadPtr<F> payloadPtr)
 
                                             if (!retCode) { ioSocket.shutdown(Socket::shutdown_receive); }
                                          });
-
-    if (administration.exitManager.sessionWasRemoved()) { return; }
-
-    writeAnswerSw(requestContext.answerHdr,
-                  Int2Type<Cfg::serverSendsAnswer>(),
-                  payloadPtr);
+    throwIfRemoved();
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
-    const AnswerHdr &,
+template<typename AnswerHdr>
+void Session<Cfg>::writeAnswerHdrSw(
+    AnswerHdr &,
     const NoAnswerAtAll &,
-    PayloadPtr<F> payloadPtr)
+    const YieldContext &)
 {
-    readRequestSw(requestCompletion, payloadPtr);
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
-    const AnswerHdr &,
+template<typename AnswerHdr>
+void Session<Cfg>::writeAnswerHdrSw(
+    AnswerHdr &hdr,
     const AtLeastHeader &,
-    PayloadPtr<F> payloadPtr)
+    const YieldContext &yield)
 {
-    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size()* sizeof(typename Cfg::AnswerDataRepr), requestContext.answerHdr);
+    Cfg::AnswerHdr::setSize2(requestContext.outDataBuffer.size()
+                             * sizeof(typename Cfg::AnswerDataRepr),
+                             hdr);
 
-    async_write(ioSocket, Asio::buffer(&requestContext.answerHdr, sizeof(requestContext.answerHdr)),
-                [=] (const Sys::error_code &errorCode,
-                     size_t)
-                {
-                    if (administration.exitManager.sessionWasRemoved()) { return; }
-                    if (errorCode)
-                    {
-                        logger(logger.errorOccured(), "Cannot write answer header '%s'; ", errorCode.message().c_str());
-                        return;
-                    }
-                    writeAnswerData(payloadPtr);
-                });
+    phase = writingAnswerHdr;
+    async_write(ioSocket,
+                Asio::buffer(&hdr,sizeof(hdr)),
+                yield);
+    throwIfRemoved();
 }
 
 template<class Cfg>
-template<typename AnswerHdr, class F>
-void Session<Cfg>::writeAnswerSw(
-    const AnswerHdr &,
+template<typename AnswerHdr>
+void Session<Cfg>::writeAnswerHdrSw(
+    AnswerHdr &hdr,
     const NothingIfNoData &,
-    PayloadPtr<F> payloadPtr)
+    const YieldContext &yield)
 {
-    if (requestContext.outDataBuffer.empty())
+    if (!requestContext.outDataBuffer.empty())
     {
-        readRequestSw(requestCompletion, payloadPtr);
-    }
-    else { writeAnswerSw(requestContext.answerHdr,
+        writeAnswerHdrSw(hdr,
                          AtLeastHeader(),
-                         payloadPtr); }
+                         yield);
+    }
 }
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::writeAnswerSw(
-    const NullType &,
+void Session<Cfg>::writeAnswerHdrSw(
+    NullType &,
     const NothingIfNoData &,
-    PayloadPtr<F> payloadPtr)
+    const YieldContext &)
 {
-    writeAnswerData(payloadPtr);
 }
 
 template<class Cfg>
-template<class F>
-void Session<Cfg>::writeAnswerData(PayloadPtr<F> payloadPtr)
+template<class Condition>
+void Session<Cfg>::writeAnswerData(
+    const Condition &,
+    const YieldContext &yield)
 {
-    if (!requestContext.outDataBuffer.size())
+    if (requestContext.outDataBuffer.size())
     {
-        readRequestSw(requestCompletion, payloadPtr);
+        phase = writingAnswerData;
+        async_write(ioSocket,
+                    Asio::buffer(requestContext.outDataBuffer),
+                    yield);
+        throwIfRemoved();
     }
-    else
-    {
-        async_write(ioSocket, Asio::buffer(requestContext.outDataBuffer),
-                    [=] (const Sys::error_code &errorCode,
-                         size_t numOfBytesSent)
-                    {
-                        if (administration.exitManager.sessionWasRemoved()) { return; }
-                        if (errorCode)
-                        {
-                            logger(logger.errorOccured(), "Cannot write answer data '%s'; ", errorCode.message().c_str());
-                            return;
-                        }
-                        readRequestSw(requestCompletion, payloadPtr);
-                });
-    }
+}
+
+template<class Cfg>
+void Session<Cfg>::writeAnswerData(
+    const NoAnswerAtAll &,
+    const YieldContext &)
+{
 }
 
 template<class Cfg>
@@ -279,6 +243,40 @@ void Session<Cfg>::setTimer()
                        sessionContext.sessionHdrRO,
                        sessionContext.sessionSpecific,
                        serverSpace);
+}
+
+template<class Cfg>
+template<class F>
+void Session<Cfg>::run(F payload)
+{
+    PayloadPtr<F> payloadPtr(new Payload<F>(payload,
+                                            this->shared_from_this()));
+    Asio::spawn(ioSocket.get_io_service(),
+                [=](YieldContext yield)
+                {
+                    try
+                    {
+                        readSessionHdrSw(sessionContext.sessionHdr, yield);
+                        initSessionSpecificSw(sessionContext.initSessionSpecific);
+                        while (1)
+                        {
+                            readRequestHdrSw(requestContext.requestHdr, yield);
+                            readRequestDataSw(requestCompletion, yield);
+                            processRequest(payloadPtr);
+
+                            writeAnswerHdrSw(requestContext.answerHdr,
+                                             Int2Type<Cfg::serverSendsAnswer>(),
+                                             yield);
+                            writeAnswerData(Int2Type<Cfg::serverSendsAnswer>(), yield);
+                        }
+                    }
+                    catch (SessionWasRemoved &) {}
+                    catch (std::exception &exc)
+                    {
+                        logger(logger.errorOccured(), "%s: '%s';",
+                               errorMessages[phase].c_str(), exc.what());
+                    }
+                });
 }
 
 }

@@ -18,9 +18,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #include "detail/Session/Session.hpp"
 #include "DefaultSettingsList.hpp"
+
 
 namespace ProtoTransformer
 {
@@ -77,9 +77,6 @@ class Server
     ServerSpace *serverSpace;
     typename Cfg::TaskManager taskManager;
 
-    typedef typename Cfg::SessionManager::template Itself<Session<Cfg>> SessionManager;
-    typedef std::shared_ptr<SessionManager> SessionManagerPtr;
-    SessionManagerPtr sessionManagerPtr;
 
     Asio::signal_set sigHandler;
     Server(const Server &);
@@ -88,9 +85,6 @@ class Server
     void setupSigHandler(NullType) {}
     template<class H>
     void setupSigHandler(const H &);
-
-    // working body;
-    template<class F> void startAccepting(F, SessionManagerPtr);
 
     public:
 

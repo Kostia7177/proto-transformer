@@ -35,57 +35,36 @@ void ReadingManager::Itself<C, D>::afterReading(size_t size)
 }
 
 template<class C, typename D>
-template<class F, typename... AdditionalCtl>
-void ReadingManager::Itself<C, D>::readAndDoSw(
-    F f,
-    Socket &inSocket,
-    AdditionalCtl &&... additionalCtl)
+void ReadingManager::Itself<C, D>::readSw(
+    NullType,
+    Socket &inSocket)
 {
-    if (size_t sizeOfDataCompleted = TricksAndThings::
-                                     filteringAdapter(readingCompleted,
-                                                      static_cast<const DataBuffer &>(dataBufferRef),
-                                                      static_cast<const size_t &>(offset),
-                                                      static_cast<const size_t &>(accumulated),
-                                                      std::forward<AdditionalCtl>(additionalCtl)...))
-    {
-        afterReading(sizeOfDataCompleted);
-        f();
-    }
-    else
-    {
-        beforeRecv();
-
-        GccBug47226Satellite bugOverriding;
-        // drop the 'paramsHierarchized' when the g++ bug will be fixed;
-        TricksAndThings::Params2Hierarchy<TricksAndThings::BindNotNullsOnly,  AdditionalCtl...> paramsHierarchized(additionalCtl...);
-        GccBug47226Satellite endOfBugOverriding;
-
-        inSocket.async_read_some(Asio::buffer(&dataBufferRef[accumulated],
-                                              dataBufferRef.size() - accumulated),
-                                 [=, &inSocket] (const Sys::error_code &errorCode, size_t numOfBytes)
-                                 {
-                                    if (errorCode) { return; }
-                                    accumulated += numOfBytes;
-
-                                    GccBug47226Satellite bugOverriding1;
-                                    // drop the 'bind' and...
-                                    Bind<F> bind(this, inSocket, f);
-                                    // ...replace the following call with the Bind::operator()(...)'s body...
-                                    TricksAndThings::Hierarchy2Params<decltype(paramsHierarchized)>::call(bind,
-                                                                                         paramsHierarchized);
-                                    // ...when the g++ bug will be fixed;
-                                    GccBug47226Satellite endOfBugOverriding1;
-                                 });
-    }
+    accumulated += inSocket.read_some(Asio::buffer(&dataBufferRef[accumulated],
+                                                   dataBufferRef.size() - accumulated));
 }
 
 template<class C, typename D>
-template<typename... AdditionalCtl>
-void ReadingManager::Itself<C, D>::readAndDoSw(
-    NullType,
+void ReadingManager::Itself<C, D>::readSw(
+    const Asio::yield_context &yield,
+    Socket &inSocket)
+{
+    accumulated += inSocket.async_read_some(Asio::buffer(&dataBufferRef[accumulated],
+                                                         dataBufferRef.size() - accumulated),
+                                            yield);
+}
+
+template<class C, typename D>
+template<class Y, typename... AdditionalCtl>
+void ReadingManager::Itself<C, D>::get(
     Socket &inSocket,
+    Y maybeYield,
     AdditionalCtl &&... additionalCtl)
 {
+    dataBufferRef.clear();
+    if (!dataRest.empty()){ dataBufferRef.swap(dataRest); }
+
+    accumulated = dataBufferRef.size();
+    offset = 0;
     size_t sizeOfDataCompleted;
     while (!(sizeOfDataCompleted = TricksAndThings::
                                    filteringAdapter(readingCompleted,
@@ -95,25 +74,10 @@ void ReadingManager::Itself<C, D>::readAndDoSw(
                                                     std::forward<AdditionalCtl>(additionalCtl)...)))
     {
         beforeRecv();
-        accumulated += inSocket.read_some(Asio::buffer(&dataBufferRef[accumulated],
-                                                       dataBufferRef.size() - accumulated));
+        readSw(maybeYield, inSocket);
     }
+
     afterReading(sizeOfDataCompleted);
-}
-
-template<class C, typename D>
-template<class F, typename... AdditionalCtl>
-void ReadingManager::Itself<C, D>::get(
-    Socket &inSocket,
-    F whenCompleted,
-    AdditionalCtl &&... additionalCtl)
-{
-    dataBufferRef.clear();
-    if (!dataRest.empty()){ dataBufferRef.swap(dataRest); }
-
-    accumulated = dataBufferRef.size();
-    offset = 0;
-    readAndDoSw(whenCompleted, inSocket, additionalCtl...);
 }
 
 }

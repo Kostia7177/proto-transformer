@@ -21,7 +21,7 @@ Headers			= $(shell find $1 -name "*.hpp" -o -name "*.tcc")
 ProvideObj		= g++ $(CFLAGS) -o $@ -c $<
 #ProvideObj += -fsanitize=address
 #ProvideObj += -pg
-LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_chrono -lboost_thread -lpthread -lboost_program_options -latomic
+LinkBinary		= g++ -o $@ $^ -lboost_system -lboost_chrono -lboost_thread -lpthread -lboost_program_options -latomic -lboost_coroutine -lboost_context
 #LinkBinary += -fsanitize=address
 #LinkBinary += -pg
 
