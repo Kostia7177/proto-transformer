@@ -8,6 +8,7 @@ Easy way to make and customize your own application-layer protocol. Just play wi
 ###Requires
 
 g++ 4.8.1 and higher
+
 boost 1.54 and higher
 
 ###Installation
